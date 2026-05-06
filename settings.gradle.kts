@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "oauth2-kotlin"
+
