@@ -54,7 +54,7 @@ and will not happen in patch releases.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kotlinmania:oauth2-kotlin:0.1.0-SNAPSHOT")
+    implementation("io.github.kotlinmania:oauth2-kotlin:0.1.0")
 }
 ```
 
