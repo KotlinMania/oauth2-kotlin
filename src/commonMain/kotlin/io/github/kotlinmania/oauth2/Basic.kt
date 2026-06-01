@@ -179,7 +179,7 @@ private class JsonStringObjectParser(
             requireNext(':')
             skipWhitespace()
             if (name in recognizedFieldNames) {
-                fields[name] = parseString()
+                parseNullableString()?.let { fields[name] = it }
             } else {
                 skipValue()
             }
@@ -189,6 +189,18 @@ private class JsonStringObjectParser(
                 return fields
             }
             requireNext(',')
+        }
+    }
+
+    private fun parseNullableString(): String? {
+        skipWhitespace()
+        return if (index < value.length && value[index] == '"') {
+            parseString()
+        } else {
+            val start = index
+            skipLiteral()
+            require(value.substring(start, index) == "null") { "Expected JSON string or null at JSON offset $start" }
+            null
         }
     }
 

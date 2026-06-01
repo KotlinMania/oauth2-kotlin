@@ -34,11 +34,11 @@ class ErrorTest {
     }
 
     @Test
-    fun error_response_decoder_ignores_extension_fields() {
+    fun error_response_decoder_ignores_extension_fields_and_null_optional_fields() {
         assertEquals(
             BasicErrorResponse(BasicErrorResponseType.InvalidGrant),
             BasicErrorResponse.fromJsonString(
-                "{\"error\":\"invalid_grant\",\"error_codes\":[70000],\"status\":400,\"metadata\":{\"retry\":false}}",
+                "{\"error\":\"invalid_grant\",\"error_description\":null,\"error_uri\":null,\"error_codes\":[70000],\"status\":400,\"metadata\":{\"retry\":false}}",
             ),
         )
     }
