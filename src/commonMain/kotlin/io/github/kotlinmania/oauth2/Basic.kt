@@ -97,7 +97,146 @@ public class BasicErrorResponse(
     error: BasicErrorResponseType,
     errorDescription: String? = null,
     errorUri: String? = null,
-) : StandardErrorResponse<BasicErrorResponseType>(error, errorDescription, errorUri)
+) : StandardErrorResponse<BasicErrorResponseType>(error, errorDescription, errorUri) {
+    /** Encodes this error response using the RFC 6749 JSON field names. */
+    public fun toJsonString(): String =
+        buildString {
+            append("{\"error\":")
+            appendJsonString(error.code)
+            if (errorDescription != null) {
+                append(",\"error_description\":")
+                appendJsonString(errorDescription)
+            }
+            if (errorUri != null) {
+                append(",\"error_uri\":")
+                appendJsonString(errorUri)
+            }
+            append("}")
+        }
+
+    public companion object {
+        /** Decodes an RFC 6749 JSON error response object. */
+        public fun fromJsonString(value: String): BasicErrorResponse {
+            val fields = parseJsonStringObject(value)
+            return BasicErrorResponse(
+                BasicErrorResponseType.fromString(requireNotNull(fields["error"]) { "Missing required error field" }),
+                fields["error_description"],
+                fields["error_uri"],
+            )
+        }
+    }
+}
 
 /** Token error specialization for basic OAuth2 implementation. */
 public typealias BasicRequestTokenError<RequestError> = RequestTokenError<RequestError, BasicErrorResponse>
+
+private fun StringBuilder.appendJsonString(value: String) {
+    append('"')
+    value.forEach { character ->
+        when (character) {
+            '"' -> append("\\\"")
+            '\\' -> append("\\\\")
+            '\b' -> append("\\b")
+            '\u000C' -> append("\\f")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            else ->
+                if (character < ' ') {
+                    append("\\u")
+                    append(character.code.toString(16).padStart(4, '0'))
+                } else {
+                    append(character)
+                }
+        }
+    }
+    append('"')
+}
+
+private fun parseJsonStringObject(value: String): Map<String, String> {
+    val parser = JsonStringObjectParser(value)
+    return parser.parse()
+}
+
+private class JsonStringObjectParser(
+    private val value: String,
+) {
+    private var index = 0
+
+    fun parse(): Map<String, String> {
+        val fields = mutableMapOf<String, String>()
+        skipWhitespace()
+        requireNext('{')
+        skipWhitespace()
+        if (consumeIf('}')) return fields
+        while (true) {
+            skipWhitespace()
+            val name = parseString()
+            skipWhitespace()
+            requireNext(':')
+            skipWhitespace()
+            fields[name] = parseString()
+            skipWhitespace()
+            if (consumeIf('}')) return fields
+            requireNext(',')
+        }
+    }
+
+    private fun parseString(): String {
+        requireNext('"')
+        return buildString {
+            while (index < value.length) {
+                when (val character = value[index++]) {
+                    '"' -> return@buildString
+                    '\\' -> append(parseEscape())
+                    else -> append(character)
+                }
+            }
+            error("Unterminated JSON string")
+        }
+    }
+
+    private fun parseEscape(): Char {
+        require(index < value.length) { "Unterminated JSON escape" }
+        return when (val character = value[index++]) {
+            '"' -> '"'
+            '\\' -> '\\'
+            '/' -> '/'
+            'b' -> '\b'
+            'f' -> '\u000C'
+            'n' -> '\n'
+            'r' -> '\r'
+            't' -> '\t'
+            'u' -> parseUnicodeEscape()
+            else -> error("Invalid JSON escape: $character")
+        }
+    }
+
+    private fun parseUnicodeEscape(): Char {
+        require(index + 4 <= value.length) { "Incomplete JSON unicode escape" }
+        val code = value.substring(index, index + 4).toInt(16)
+        index += 4
+        return code.toChar()
+    }
+
+    private fun skipWhitespace() {
+        while (index < value.length && value[index].isWhitespace()) {
+            index += 1
+        }
+    }
+
+    private fun consumeIf(expected: Char): Boolean {
+        if (index < value.length && value[index] == expected) {
+            index += 1
+            skipWhitespace()
+            require(index == value.length || expected != '}') { "Unexpected trailing JSON content" }
+            return true
+        }
+        return false
+    }
+
+    private fun requireNext(expected: Char) {
+        require(index < value.length && value[index] == expected) { "Expected '$expected' at JSON offset $index" }
+        index += 1
+    }
+}

@@ -9,36 +9,35 @@ class ErrorTest {
     fun test_error_response_serializer() {
         assertEquals(
             "{\"error\":\"unauthorized_client\"}",
-            encodeBasicErrorResponse(BasicErrorResponse(BasicErrorResponseType.UnauthorizedClient)),
+            BasicErrorResponse(BasicErrorResponseType.UnauthorizedClient).toJsonString(),
         )
 
         assertEquals(
             "{\"error\":\"invalid_client\",\"error_description\":\"Invalid client_id\",\"error_uri\":\"https://example.com/errors/invalid_client\"}",
-            encodeBasicErrorResponse(
-                BasicErrorResponse(
-                    BasicErrorResponseType.InvalidClient,
-                    "Invalid client_id",
-                    "https://example.com/errors/invalid_client",
-                ),
+            BasicErrorResponse(
+                BasicErrorResponseType.InvalidClient,
+                "Invalid client_id",
+                "https://example.com/errors/invalid_client",
+            ).toJsonString(),
+        )
+
+        assertEquals(
+            BasicErrorResponse(
+                BasicErrorResponseType.InvalidClient,
+                "Invalid client_id",
+                "https://example.com/errors/invalid_client",
+            ),
+            BasicErrorResponse.fromJsonString(
+                "{\"error\":\"invalid_client\",\"error_description\":\"Invalid client_id\",\"error_uri\":\"https://example.com/errors/invalid_client\"}",
             ),
         )
     }
 
-    private fun encodeBasicErrorResponse(response: BasicErrorResponse): String =
-        buildString {
-            append("{\"error\":\"")
-            append(response.error.code)
-            append("\"")
-            if (response.errorDescription != null) {
-                append(",\"error_description\":\"")
-                append(response.errorDescription)
-                append("\"")
-            }
-            if (response.errorUri != null) {
-                append(",\"error_uri\":\"")
-                append(response.errorUri)
-                append("\"")
-            }
-            append("}")
-        }
+    @Test
+    fun error_response_equality_uses_values() {
+        assertEquals(
+            RequestTokenError.ServerResponse(BasicErrorResponse(BasicErrorResponseType.InvalidClient, "Invalid client")),
+            RequestTokenError.ServerResponse(BasicErrorResponse(BasicErrorResponseType.InvalidClient, "Invalid client")),
+        )
+    }
 }

@@ -42,6 +42,20 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
                 append(')')
             }
         }
+
+    override fun equals(other: Any?): Boolean =
+        this === other ||
+            other is StandardErrorResponse<*> &&
+            error == other.error &&
+            errorDescription == other.errorDescription &&
+            errorUri == other.errorUri
+
+    override fun hashCode(): Int {
+        var result = error.hashCode()
+        result = 31 * result + (errorDescription?.hashCode() ?: 0)
+        result = 31 * result + (errorUri?.hashCode() ?: 0)
+        return result
+    }
 }
 
 /** Error encountered while requesting access token. */
