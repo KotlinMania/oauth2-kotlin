@@ -27,7 +27,6 @@ import java.util.zip.ZipInputStream
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.kmp)
     alias(libs.plugins.vanniktech)
     alias(libs.plugins.detekt)
@@ -322,9 +321,6 @@ kotlin {
     }
 
     sourceSets {
-        commonMain.dependencies {
-            implementation(libs.bundles.serde.commonMain)
-        }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
