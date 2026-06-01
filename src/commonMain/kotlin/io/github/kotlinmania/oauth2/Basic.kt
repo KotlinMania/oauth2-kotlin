@@ -168,7 +168,10 @@ private class JsonStringObjectParser(
         skipWhitespace()
         requireNext('{')
         skipWhitespace()
-        if (consumeIf('}')) return fields
+        if (consumeIf('}')) {
+            requireComplete()
+            return fields
+        }
         while (true) {
             skipWhitespace()
             val name = parseString()
@@ -181,7 +184,10 @@ private class JsonStringObjectParser(
                 skipValue()
             }
             skipWhitespace()
-            if (consumeIf('}')) return fields
+            if (consumeIf('}')) {
+                requireComplete()
+                return fields
+            }
             requireNext(',')
         }
     }
@@ -280,10 +286,13 @@ private class JsonStringObjectParser(
         if (index < value.length && value[index] == expected) {
             index += 1
             skipWhitespace()
-            require(index == value.length || expected != '}') { "Unexpected trailing JSON content" }
             return true
         }
         return false
+    }
+
+    private fun requireComplete() {
+        require(index == value.length) { "Unexpected trailing JSON content" }
     }
 
     private fun requireNext(expected: Char) {

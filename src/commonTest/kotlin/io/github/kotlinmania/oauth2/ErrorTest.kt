@@ -37,7 +37,9 @@ class ErrorTest {
     fun error_response_decoder_ignores_extension_fields() {
         assertEquals(
             BasicErrorResponse(BasicErrorResponseType.InvalidGrant),
-            BasicErrorResponse.fromJsonString("{\"error\":\"invalid_grant\",\"error_codes\":[70000],\"status\":400}"),
+            BasicErrorResponse.fromJsonString(
+                "{\"error\":\"invalid_grant\",\"error_codes\":[70000],\"status\":400,\"metadata\":{\"retry\":false}}",
+            ),
         )
     }
 
