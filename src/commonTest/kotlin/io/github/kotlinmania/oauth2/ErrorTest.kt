@@ -34,6 +34,14 @@ class ErrorTest {
     }
 
     @Test
+    fun error_response_decoder_ignores_extension_fields() {
+        assertEquals(
+            BasicErrorResponse(BasicErrorResponseType.InvalidGrant),
+            BasicErrorResponse.fromJsonString("{\"error\":\"invalid_grant\",\"error_codes\":[70000],\"status\":400}"),
+        )
+    }
+
+    @Test
     fun error_response_equality_uses_values() {
         assertEquals(
             RequestTokenError.ServerResponse(BasicErrorResponse(BasicErrorResponseType.InvalidClient, "Invalid client")),

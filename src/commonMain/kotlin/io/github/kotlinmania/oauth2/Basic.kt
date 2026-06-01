@@ -175,7 +175,11 @@ private class JsonStringObjectParser(
             skipWhitespace()
             requireNext(':')
             skipWhitespace()
-            fields[name] = parseString()
+            if (name in recognizedFieldNames) {
+                fields[name] = parseString()
+            } else {
+                skipValue()
+            }
             skipWhitespace()
             if (consumeIf('}')) return fields
             requireNext(',')
@@ -194,6 +198,53 @@ private class JsonStringObjectParser(
             }
             error("Unterminated JSON string")
         }
+    }
+
+    private fun skipValue() {
+        skipWhitespace()
+        require(index < value.length) { "Missing JSON value" }
+        when (value[index]) {
+            '"' -> parseString()
+            '{' -> skipObject()
+            '[' -> skipArray()
+            else -> skipLiteral()
+        }
+    }
+
+    private fun skipObject() {
+        requireNext('{')
+        skipWhitespace()
+        if (consumeIf('}')) return
+        while (true) {
+            skipWhitespace()
+            parseString()
+            skipWhitespace()
+            requireNext(':')
+            skipValue()
+            skipWhitespace()
+            if (consumeIf('}')) return
+            requireNext(',')
+        }
+    }
+
+    private fun skipArray() {
+        requireNext('[')
+        skipWhitespace()
+        if (consumeIf(']')) return
+        while (true) {
+            skipValue()
+            skipWhitespace()
+            if (consumeIf(']')) return
+            requireNext(',')
+        }
+    }
+
+    private fun skipLiteral() {
+        val start = index
+        while (index < value.length && value[index] !in listOf(',', '}', ']') && !value[index].isWhitespace()) {
+            index += 1
+        }
+        require(index > start) { "Missing JSON literal" }
     }
 
     private fun parseEscape(): Char {
@@ -238,5 +289,9 @@ private class JsonStringObjectParser(
     private fun requireNext(expected: Char) {
         require(index < value.length && value[index] == expected) { "Expected '$expected' at JSON offset $index" }
         index += 1
+    }
+
+    private companion object {
+        val recognizedFieldNames = setOf("error", "error_description", "error_uri")
     }
 }
