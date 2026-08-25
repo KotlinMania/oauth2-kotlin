@@ -1,4 +1,4 @@
-// port-lint: tests oauth2/src/error.rs
+// port-lint: tests error.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.test.Test
@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 
 class ErrorTest {
     @Test
-    fun test_error_response_serializer() {
+    fun testErrorResponseSerializer() {
         assertEquals(
             "{\"error\":\"unauthorized_client\"}",
             BasicErrorResponse(BasicErrorResponseType.UnauthorizedClient).toJsonString(),
@@ -34,7 +34,7 @@ class ErrorTest {
     }
 
     @Test
-    fun error_response_decoder_ignores_extension_fields_and_null_optional_fields() {
+    fun errorResponseDecoderIgnoresExtensionFieldsAndNullOptionalFields() {
         assertEquals(
             BasicErrorResponse(BasicErrorResponseType.InvalidGrant),
             BasicErrorResponse.fromJsonString(
@@ -44,10 +44,11 @@ class ErrorTest {
     }
 
     @Test
-    fun error_response_equality_uses_values() {
+    fun errorResponseEqualityUsesValues() {
         assertEquals(
             RequestTokenError.ServerResponse(BasicErrorResponse(BasicErrorResponseType.InvalidClient, "Invalid client")),
             RequestTokenError.ServerResponse(BasicErrorResponse(BasicErrorResponseType.InvalidClient, "Invalid client")),
         )
     }
 }
+
