@@ -4,6 +4,10 @@
 package io.github.kotlinmania.oauth2
 
 import kotlin.native.HiddenFromObjC
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Server Error Response
@@ -27,6 +31,8 @@ public interface ErrorResponse
  */
 public interface ErrorResponseType {
     public val code: String
+        get() = value
+    public val value: String
 }
 
 /**
@@ -72,6 +78,24 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
      */
     public fun errorUri(): String? = errorUri
 
+    public fun toJsonString(): String =
+        buildString {
+            append("{\"error\":\"")
+            append(error.code)
+            append('"')
+            if (errorDescription != null) {
+                append(",\"error_description\":\"")
+                append(errorDescription)
+                append('"')
+            }
+            if (errorUri != null) {
+                append(",\"error_uri\":\"")
+                append(errorUri)
+                append('"')
+            }
+            append('}')
+        }
+
     override fun toString(): String =
         buildString {
             append(error.code)
@@ -113,27 +137,47 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
             errorDescription: String? = null,
             errorUri: String? = null,
         ): StandardErrorResponse<T> = StandardErrorResponse(error, errorDescription, errorUri)
+
+        public fun fromJsonString(
+            jsonString: String,
+            errorTypeFactory: (String) -> BasicErrorResponseType = { BasicErrorResponseType.fromString(it) },
+        ): StandardErrorResponse<BasicErrorResponseType> {
+            val json = Json.parseToJsonElement(jsonString).jsonObject
+            val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+            val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
+            val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
+            return StandardErrorResponse(errorTypeFactory(errCode), errDesc, errUri)
+        }
     }
 }
 
 /** Error encountered while requesting access token. */
 @HiddenFromObjC
-public sealed class RequestTokenError<out RequestError, out TokenError : ErrorResponse> {
+public sealed class RequestTokenError(
+    message: String? = null,
+    cause: Throwable? = null,
+) : Exception(message, cause) {
     /**
      * Error response returned by authorization server. Contains the parsed `ErrorResponse`
      * returned by the server.
      */
-    public data class ServerResponse<out TokenError : ErrorResponse>(
-        public val error: TokenError,
-    ) : RequestTokenError<Nothing, TokenError>()
+    public data class ServerResponse(
+        public val response: ErrorResponse,
+    ) : RequestTokenError("Server returned error response: $response") {
+        public fun response(): ErrorResponse = response
+        public fun error(): ErrorResponse = response
+
+        @Suppress("UNCHECKED_CAST")
+        public fun <T : ErrorResponse> typedResponse(): T = response as T
+    }
 
     /**
      * An error occurred while sending the request or receiving the response (e.g., network
      * connectivity failed).
      */
-    public data class Request<out RequestError>(
-        public val error: RequestError,
-    ) : RequestTokenError<RequestError, Nothing>()
+    public data class Request(
+        public val error: Throwable,
+    ) : RequestTokenError("Request error: ${error.message}", error)
 
     /**
      * Failed to parse server response. Parse errors may occur while parsing either successful
@@ -142,7 +186,7 @@ public sealed class RequestTokenError<out RequestError, out TokenError : ErrorRe
     public data class Parse(
         public val error: String,
         public val responseBody: ByteArray,
-    ) : RequestTokenError<Nothing, Nothing>() {
+    ) : RequestTokenError("Failed to parse response: $error") {
         override fun equals(other: Any?): Boolean =
             this === other ||
                 other is Parse &&
@@ -154,6 +198,6 @@ public sealed class RequestTokenError<out RequestError, out TokenError : ErrorRe
 
     /** Some other type of error occurred (e.g., an unexpected server response). */
     public data class Other(
-        public val message: String,
-    ) : RequestTokenError<Nothing, Nothing>()
+        public val error: String,
+    ) : RequestTokenError(error)
 }

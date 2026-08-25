@@ -4,9 +4,13 @@
 package io.github.kotlinmania.oauth2
 
 import kotlin.native.HiddenFromObjC
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Basic OAuth2 authorization token types. */
-public sealed class BasicTokenType {
+public sealed class BasicTokenType : TokenType {
     /** Bearer token. */
     public data object Bearer : BasicTokenType() {
         override val value: String = "bearer"
@@ -24,13 +28,11 @@ public sealed class BasicTokenType {
         override val value: String = rawValue
     }
 
-    public abstract val value: String
-
     override fun toString(): String = value
 
     public companion object {
         public fun fromString(value: String): BasicTokenType =
-            when (value) {
+            when (value.lowercase()) {
                 "bearer" -> Bearer
                 "mac" -> Mac
                 else -> Extension(value)
@@ -60,10 +62,10 @@ public sealed class BasicErrorResponseType : ErrorResponseType {
 
     /** An extension not defined by RFC 6749. */
     public data class Extension(
-        public val value: String,
+        public val rawValue: String,
     ) : BasicErrorResponseType()
 
-    override val code: String
+    override val value: String
         get() =
             when (this) {
                 InvalidClient -> "invalid_client"
@@ -72,10 +74,10 @@ public sealed class BasicErrorResponseType : ErrorResponseType {
                 InvalidScope -> "invalid_scope"
                 UnauthorizedClient -> "unauthorized_client"
                 UnsupportedGrantType -> "unsupported_grant_type"
-                is Extension -> value
+                is Extension -> rawValue
             }
 
-    override fun toString(): String = code
+    override fun toString(): String = value
 
     public companion object {
         public fun fromString(value: String): BasicErrorResponseType =
@@ -92,227 +94,55 @@ public sealed class BasicErrorResponseType : ErrorResponseType {
 }
 
 /** Error response specialization for basic OAuth2 implementation. */
-@HiddenFromObjC
-public class BasicErrorResponse(
-    error: BasicErrorResponseType,
-    errorDescription: String? = null,
-    errorUri: String? = null,
-) : StandardErrorResponse<BasicErrorResponseType>(error, errorDescription, errorUri) {
-    /** Encodes this error response using the RFC 6749 JSON field names. */
-    public fun toJsonString(): String =
-        buildString {
-            append("{\"error\":")
-            appendJsonString(error.code)
-            if (errorDescription != null) {
-                append(",\"error_description\":")
-                appendJsonString(errorDescription)
-            }
-            if (errorUri != null) {
-                append(",\"error_uri\":")
-                appendJsonString(errorUri)
-            }
-            append("}")
-        }
+public typealias BasicErrorResponse = StandardErrorResponse<BasicErrorResponseType>
 
-    public companion object {
-        /** Decodes an RFC 6749 JSON error response object. */
-        public fun fromJsonString(value: String): BasicErrorResponse {
-            val fields = parseJsonStringObject(value)
-            return BasicErrorResponse(
-                BasicErrorResponseType.fromString(requireNotNull(fields["error"]) { "Missing required error field" }),
-                fields["error_description"],
-                fields["error_uri"],
-            )
-        }
-    }
-}
+/** Revocation error response specialization for basic OAuth2 implementation. */
+public typealias BasicRevocationErrorResponse = StandardErrorResponse<RevocationErrorResponseType>
+
+/** Basic OAuth2 token response. */
+public typealias BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>
+
+/** Basic OAuth2 token introspection response. */
+public typealias BasicTokenIntrospectionResponse =
+    StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>
 
 /** Token error specialization for basic OAuth2 implementation. */
-public typealias BasicRequestTokenError<RequestError> = RequestTokenError<RequestError, BasicErrorResponse>
+public typealias BasicRequestTokenError = RequestTokenError
 
-private fun StringBuilder.appendJsonString(value: String) {
-    append('"')
-    value.forEach { character ->
-        when (character) {
-            '"' -> append("\\\"")
-            '\\' -> append("\\\\")
-            '\b' -> append("\\b")
-            '\u000C' -> append("\\f")
-            '\n' -> append("\\n")
-            '\r' -> append("\\r")
-            '\t' -> append("\\t")
-            else ->
-                if (character < ' ') {
-                    append("\\u")
-                    append(character.code.toString(16).padStart(4, '0'))
-                } else {
-                    append(character)
+/** Basic OAuth2 client specialization, suitable for most applications. */
+public typealias BasicClient = Client<
+    BasicErrorResponse,
+    BasicTokenResponse,
+    BasicTokenIntrospectionResponse,
+    StandardRevocableToken,
+    BasicRevocationErrorResponse,
+>
+
+public object BasicClientFactory {
+    public fun new(clientId: ClientId): BasicClient =
+        Client(
+            clientId = clientId,
+            tokenResponseDeserializer = { bytes ->
+                StandardTokenResponse.fromJsonString(bytes.decodeToString()) { BasicTokenType.fromString(it) }
+            },
+            tokenErrorDeserializer = { bytes ->
+                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
+                val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+                val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
+                val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
+                BasicErrorResponse.new(BasicErrorResponseType.fromString(errCode), errDesc, errUri)
+            },
+            introspectionResponseDeserializer = { bytes ->
+                StandardTokenIntrospectionResponse.fromJsonString(bytes.decodeToString()) {
+                    BasicTokenType.fromString(it)
                 }
-        }
-    }
-    append('"')
-}
-
-private fun parseJsonStringObject(value: String): Map<String, String> {
-    val parser = JsonStringObjectParser(value)
-    return parser.parse()
-}
-
-private class JsonStringObjectParser(
-    private val value: String,
-) {
-    private var index = 0
-
-    fun parse(): Map<String, String> {
-        val fields = mutableMapOf<String, String>()
-        skipWhitespace()
-        requireNext('{')
-        skipWhitespace()
-        if (consumeIf('}')) {
-            requireComplete()
-            return fields
-        }
-        while (true) {
-            skipWhitespace()
-            val name = parseString()
-            skipWhitespace()
-            requireNext(':')
-            skipWhitespace()
-            if (name in recognizedFieldNames) {
-                parseNullableString()?.let { fields[name] = it }
-            } else {
-                skipValue()
-            }
-            skipWhitespace()
-            if (consumeIf('}')) {
-                requireComplete()
-                return fields
-            }
-            requireNext(',')
-        }
-    }
-
-    private fun parseNullableString(): String? {
-        skipWhitespace()
-        return if (index < value.length && value[index] == '"') {
-            parseString()
-        } else {
-            val start = index
-            skipLiteral()
-            require(value.substring(start, index) == "null") { "Expected JSON string or null at JSON offset $start" }
-            null
-        }
-    }
-
-    private fun parseString(): String {
-        requireNext('"')
-        return buildString {
-            while (index < value.length) {
-                when (val character = value[index++]) {
-                    '"' -> return@buildString
-                    '\\' -> append(parseEscape())
-                    else -> append(character)
-                }
-            }
-            error("Unterminated JSON string")
-        }
-    }
-
-    private fun skipValue() {
-        skipWhitespace()
-        require(index < value.length) { "Missing JSON value" }
-        when (value[index]) {
-            '"' -> parseString()
-            '{' -> skipObject()
-            '[' -> skipArray()
-            else -> skipLiteral()
-        }
-    }
-
-    private fun skipObject() {
-        requireNext('{')
-        skipWhitespace()
-        if (consumeIf('}')) return
-        while (true) {
-            skipWhitespace()
-            parseString()
-            skipWhitespace()
-            requireNext(':')
-            skipValue()
-            skipWhitespace()
-            if (consumeIf('}')) return
-            requireNext(',')
-        }
-    }
-
-    private fun skipArray() {
-        requireNext('[')
-        skipWhitespace()
-        if (consumeIf(']')) return
-        while (true) {
-            skipValue()
-            skipWhitespace()
-            if (consumeIf(']')) return
-            requireNext(',')
-        }
-    }
-
-    private fun skipLiteral() {
-        val start = index
-        while (index < value.length && value[index] !in listOf(',', '}', ']') && !value[index].isWhitespace()) {
-            index += 1
-        }
-        require(index > start) { "Missing JSON literal" }
-    }
-
-    private fun parseEscape(): Char {
-        require(index < value.length) { "Unterminated JSON escape" }
-        return when (val character = value[index++]) {
-            '"' -> '"'
-            '\\' -> '\\'
-            '/' -> '/'
-            'b' -> '\b'
-            'f' -> '\u000C'
-            'n' -> '\n'
-            'r' -> '\r'
-            't' -> '\t'
-            'u' -> parseUnicodeEscape()
-            else -> error("Invalid JSON escape: $character")
-        }
-    }
-
-    private fun parseUnicodeEscape(): Char {
-        require(index + 4 <= value.length) { "Incomplete JSON unicode escape" }
-        val code = value.substring(index, index + 4).toInt(16)
-        index += 4
-        return code.toChar()
-    }
-
-    private fun skipWhitespace() {
-        while (index < value.length && value[index].isWhitespace()) {
-            index += 1
-        }
-    }
-
-    private fun consumeIf(expected: Char): Boolean {
-        if (index < value.length && value[index] == expected) {
-            index += 1
-            skipWhitespace()
-            return true
-        }
-        return false
-    }
-
-    private fun requireComplete() {
-        require(index == value.length) { "Unexpected trailing JSON content" }
-    }
-
-    private fun requireNext(expected: Char) {
-        require(index < value.length && value[index] == expected) { "Expected '$expected' at JSON offset $index" }
-        index += 1
-    }
-
-    private companion object {
-        val recognizedFieldNames = setOf("error", "error_description", "error_uri")
-    }
+            },
+            revocationErrorDeserializer = { bytes ->
+                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
+                val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+                val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
+                val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
+                BasicRevocationErrorResponse.new(RevocationErrorResponseType.fromString(errCode), errDesc, errUri)
+            },
+        )
 }
