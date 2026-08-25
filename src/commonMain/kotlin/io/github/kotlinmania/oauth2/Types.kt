@@ -12,6 +12,10 @@ public value class ClientId(
     public fun asStr(): String = value
 
     override fun toString(): String = value
+
+    public companion object {
+        public fun new(value: String): ClientId = ClientId(value)
+    }
 }
 
 /** URL of the authorization server's authorization endpoint. */
@@ -148,6 +152,10 @@ public value class ResponseType(
     public fun asStr(): String = value
 
     override fun toString(): String = value
+
+    public companion object {
+        public fun new(value: String): ResponseType = ResponseType(value)
+    }
 }
 
 /** Resource owner's username used directly as an authorization grant. */
@@ -158,6 +166,10 @@ public value class ResourceOwnerUsername(
     public fun asStr(): String = value
 
     override fun toString(): String = value
+
+    public companion object {
+        public fun new(value: String): ResourceOwnerUsername = ResourceOwnerUsername(value)
+    }
 }
 
 /** Access token scope, as defined by the authorization server. */
@@ -170,6 +182,10 @@ public value class Scope(
     public fun asStr(): String = value
 
     override fun toString(): String = value
+
+    public companion object {
+        public fun new(value: String): Scope = Scope(value)
+    }
 }
 
 /** Code challenge method used for PKCE protection. */
@@ -180,6 +196,11 @@ public value class PkceCodeChallengeMethod(
     public fun asStr(): String = value
 
     override fun toString(): String = value
+
+    public companion object {
+        public val S256: PkceCodeChallengeMethod = PkceCodeChallengeMethod("S256")
+        public val Plain: PkceCodeChallengeMethod = PkceCodeChallengeMethod("plain")
+    }
 }
 
 /**
@@ -222,6 +243,9 @@ public data class PkceCodeChallenge(
     public fun method(): PkceCodeChallengeMethod = codeChallengeMethod
 
     public companion object {
+        public fun new(challenge: String): PkceCodeChallenge =
+            PkceCodeChallenge(challenge, PkceCodeChallengeMethod.Plain)
+
         /** Generate a new random, base64-encoded SHA-256 PKCE code. */
         public fun newRandomSha256(): Pair<PkceCodeChallenge, PkceCodeVerifier> =
             newRandomSha256Len(32)
@@ -245,7 +269,7 @@ public data class PkceCodeChallenge(
             require(secret.length in 43..128) { "codeVerifier length must be between 43 and 128" }
             val digest = sha256(secret.encodeToByteArray())
             val codeChallenge = base64UrlSafeNoPad(digest)
-            return PkceCodeChallenge(codeChallenge, PkceCodeChallengeMethod("S256"))
+            return PkceCodeChallenge(codeChallenge, PkceCodeChallengeMethod.S256)
         }
 
         /** Generate a new random, base64-encoded PKCE code (plain). */
@@ -258,7 +282,7 @@ public data class PkceCodeChallenge(
         public fun fromCodeVerifierPlain(codeVerifier: PkceCodeVerifier): PkceCodeChallenge {
             val secret = codeVerifier.secret()
             require(secret.length in 43..128) { "codeVerifier length must be between 43 and 128" }
-            return PkceCodeChallenge(secret, PkceCodeChallengeMethod("plain"))
+            return PkceCodeChallenge(secret, PkceCodeChallengeMethod.Plain)
         }
     }
 }
