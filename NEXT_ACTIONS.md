@@ -5,13 +5,13 @@ Based on AST analysis, here are the concrete next steps.
 ## Summary
 
 - **Files Present:** 3/17 (17.6%)
-- **Function parity:** 1/299 matched (target 39) — 0.3%
-- **Class/type parity:** 8/77 matched (target 30) — 10.4%
-- **Combined symbol parity:** 9/376 matched (target 69) — 2.4%
-- **Average inline-code cosine:** 0.00 (function body across 3 matched files)
-- **Average documentation cosine:** 0.71 (doc text across 3 matched files)
-- **Cheat-zeroed Files:** 2
-- **Critical Issues:** 3 files with <0.60 function similarity
+- **Function parity:** 21/299 matched (target 159) — 7.0%
+- **Class/type parity:** 9/77 matched (target 47) — 11.7%
+- **Combined symbol parity:** 30/376 matched (target 206) — 8.0%
+- **Average inline-code cosine:** 0.42 (function body across 3 matched files)
+- **Average documentation cosine:** 0.83 (doc text across 3 matched files)
+- **Cheat-zeroed Files:** 0
+- **Critical Issues:** 2 files with <0.60 function similarity
 
 ## Priority 1: Fix Incomplete High-Dependency Files
 
@@ -29,41 +29,19 @@ Every matched file is listed below with function and type symbol parity.
 
 ### 1. error
 
-- **Target:** `oauth2.Error [ZERO] [PROVENANCE-FALLBACK]`
-- **Similarity:** 0.00
+- **Target:** `oauth2.Error`
+- **Similarity:** 0.47
 - **Dependents:** 8
-- **Priority Score:** 8051010.0
-- **Functions:** 1/6 matched (target 8)
-- **Missing functions:** `new`, `error`, `error_description`, `error_uri`, `fmt`
+- **Priority Score:** 8011005.5
+- **Functions:** 5/6 matched (target 12)
+- **Missing functions:** `fmt`
 - **Types:** 4/4 matched (target 9)
 - **Missing types:** _none_
 - **Tests:** 1/1 matched
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `oauth2/src/error.rs` vs expected `error.rs`
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `tests:oauth2/src/error.rs` vs expected `error.rs`
-- **Proposed provenance header:** `// port-lint: source error.rs` (current: `// port-lint: source oauth2/src/error.rs`)
-- **Proposed provenance header:** `// port-lint: tests error.rs` (current: `// port-lint: tests oauth2/src/error.rs`)
-- **Lint issues:** 2
 
-### 2. types
+### 2. basic
 
-- **Target:** `oauth2.Types [ZERO] [PROVENANCE-FALLBACK]`
-- **Similarity:** 0.00
-- **Dependents:** 0
-- **Priority Score:** 171710.0
-- **Functions:** 0/16 matched (target 10)
-- **Missing functions:** `as_ref`, `new_random_sha256`, `new_random_sha256_len`, `new_random_len`, `from_code_verifier_sha256`, `new_random_plain`, `from_code_verifier_plain`, `as_str`, `method`, `test_secret_conversion`, `test_secret_redaction`, `test_code_verifier_too_short`, `test_code_verifier_too_long`, `test_code_verifier_min`, `test_code_verifier_max`, `test_code_verifier_challenge`
-- **Types:** 0/1 matched (target 7)
-- **Missing types:** `PkceCodeChallenge`
-- **Tests:** 0/7 matched
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `oauth2/src/types.rs` vs expected `types.rs`
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `tests:oauth2/src/types.rs` vs expected `types.rs`
-- **Proposed provenance header:** `// port-lint: source types.rs` (current: `// port-lint: source oauth2/src/types.rs`)
-- **Proposed provenance header:** `// port-lint: tests types.rs` (current: `// port-lint: tests oauth2/src/types.rs`)
-- **Lint issues:** 2
-
-### 3. basic
-
-- **Target:** `oauth2.Basic [PROVENANCE-FALLBACK]`
+- **Target:** `oauth2.Basic`
 - **Similarity:** 0.00
 - **Dependents:** 0
 - **Priority Score:** 91310.0
@@ -71,9 +49,18 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing functions:** `from_str`, `as_ref`, `deserialize`, `serialize`, `fmt`
 - **Types:** 4/8 matched (target 14)
 - **Missing types:** `BasicClient`, `BasicTokenResponse`, `BasicTokenIntrospectionResponse`, `BasicRevocationErrorResponse`
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `oauth2/src/basic.rs` vs expected `basic.rs`
-- **Proposed provenance header:** `// port-lint: source basic.rs` (current: `// port-lint: source oauth2/src/basic.rs`)
-- **Lint issues:** 1
+
+### 3. types
+
+- **Target:** `oauth2.Types`
+- **Similarity:** 0.79
+- **Dependents:** 0
+- **Priority Score:** 1702.1
+- **Functions:** 16/16 matched (target 126)
+- **Missing functions:** _none_
+- **Types:** 1/1 matched (target 24)
+- **Missing types:** _none_
+- **Tests:** 7/7 matched
 
 ## Success Criteria
 
