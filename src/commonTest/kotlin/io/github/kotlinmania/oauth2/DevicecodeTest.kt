@@ -1,4 +1,4 @@
-// port-lint: tests oauth2/src/devicecode.rs
+// port-lint: tests devicecode.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.test.Test
