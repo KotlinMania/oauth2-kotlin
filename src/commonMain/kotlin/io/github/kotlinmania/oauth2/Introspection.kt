@@ -1,4 +1,4 @@
-// port-lint: source introspection.rs
+// port-lint: source oauth2/src/introspection.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.oauth2

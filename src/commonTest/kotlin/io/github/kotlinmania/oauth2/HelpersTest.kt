@@ -1,4 +1,4 @@
-// port-lint: tests helpers.rs
+// port-lint: tests oauth2/src/helpers.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.test.Test
