@@ -3,11 +3,11 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlin.native.HiddenFromObjC
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.native.HiddenFromObjC
 
 /**
  * Server Error Response
@@ -165,6 +165,7 @@ public sealed class RequestTokenError(
         public val response: ErrorResponse,
     ) : RequestTokenError("Server returned error response: $response") {
         public fun response(): ErrorResponse = response
+
         public fun error(): ErrorResponse = response
 
         @Suppress("UNCHECKED_CAST")

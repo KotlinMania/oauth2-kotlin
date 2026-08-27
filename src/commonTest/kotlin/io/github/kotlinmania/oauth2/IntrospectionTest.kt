@@ -8,7 +8,8 @@ import kotlin.test.assertTrue
 
 class IntrospectionTest {
     private fun newClient(): BasicClient =
-        BasicClientFactory.new(ClientId.new("aaa"))
+        BasicClientFactory
+            .new(ClientId.new("aaa"))
             .setAuthUri(AuthUrl.new("https://example.com/auth"))
             .setTokenUri(TokenUrl.new("https://example.com/token"))
             .setClientSecret(ClientSecret.new("bbb"))
@@ -18,29 +19,32 @@ class IntrospectionTest {
         expectedBody: String,
         responseStatus: Int,
         responseBody: ByteArray,
-    ): SyncHttpClient = SyncHttpClient { req ->
-        assertEquals(expectedUrl, req.url)
-        assertEquals(expectedBody, req.body.decodeToString())
-        HttpResponse(status = responseStatus, headers = emptyMap(), body = responseBody)
-    }
+    ): SyncHttpClient =
+        SyncHttpClient { req ->
+            assertEquals(expectedUrl, req.url)
+            assertEquals(expectedBody, req.body.decodeToString())
+            HttpResponse(status = responseStatus, headers = emptyMap(), body = responseBody)
+        }
 
     @Test
     fun testTokenIntrospectionSuccessfulWithBasicAuthMinimalResponse() {
-        val client = newClient()
-            .setAuthType(AuthType.BasicAuth)
-            .setRedirectUri(RedirectUrl.new("https://redirect/here"))
-            .setIntrospectionUrl(IntrospectionUrl.new("https://introspection/url"))
+        val client =
+            newClient()
+                .setAuthType(AuthType.BasicAuth)
+                .setRedirectUri(RedirectUrl.new("https://redirect/here"))
+                .setIntrospectionUrl(IntrospectionUrl.new("https://introspection/url"))
 
-        val introspectionResponse = client
-            .introspect(AccessToken.new("access_token_123"))
-            .request(
-                mockHttpClient(
-                    expectedUrl = "https://introspection/url",
-                    expectedBody = "token=access_token_123",
-                    responseStatus = 200,
-                    responseBody = "{\"active\": true}".encodeToByteArray(),
+        val introspectionResponse =
+            client
+                .introspect(AccessToken.new("access_token_123"))
+                .request(
+                    mockHttpClient(
+                        expectedUrl = "https://introspection/url",
+                        expectedBody = "token=access_token_123",
+                        responseStatus = 200,
+                        responseBody = "{\"active\": true}".encodeToByteArray(),
+                    ),
                 )
-            )
 
         assertTrue(introspectionResponse.active())
         assertNull(introspectionResponse.scopes())
@@ -58,12 +62,14 @@ class IntrospectionTest {
 
     @Test
     fun testTokenIntrospectionSuccessfulWithBasicAuthFullResponse() {
-        val client = newClient()
-            .setAuthType(AuthType.BasicAuth)
-            .setRedirectUri(RedirectUrl.new("https://redirect/here"))
-            .setIntrospectionUrl(IntrospectionUrl.new("https://introspection/url"))
+        val client =
+            newClient()
+                .setAuthType(AuthType.BasicAuth)
+                .setRedirectUri(RedirectUrl.new("https://redirect/here"))
+                .setIntrospectionUrl(IntrospectionUrl.new("https://introspection/url"))
 
-        val json = """
+        val json =
+            """
             {
                 "active": true,
                 "scope": "email profile",
@@ -78,19 +84,20 @@ class IntrospectionTest {
                 "iss": "http://127.0.0.1:8080/auth/realms/test-realm",
                 "jti": "be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f"
             }
-        """.trimIndent()
+            """.trimIndent()
 
-        val introspectionResponse = client
-            .introspect(AccessToken.new("access_token_123"))
-            .setTokenTypeHint("access_token")
-            .request(
-                mockHttpClient(
-                    expectedUrl = "https://introspection/url",
-                    expectedBody = "token=access_token_123&token_type_hint=access_token",
-                    responseStatus = 200,
-                    responseBody = json.encodeToByteArray(),
+        val introspectionResponse =
+            client
+                .introspect(AccessToken.new("access_token_123"))
+                .setTokenTypeHint("access_token")
+                .request(
+                    mockHttpClient(
+                        expectedUrl = "https://introspection/url",
+                        expectedBody = "token=access_token_123&token_type_hint=access_token",
+                        responseStatus = 200,
+                        responseBody = json.encodeToByteArray(),
+                    ),
                 )
-            )
 
         assertTrue(introspectionResponse.active())
         assertEquals(listOf(Scope.new("email"), Scope.new("profile")), introspectionResponse.scopes())

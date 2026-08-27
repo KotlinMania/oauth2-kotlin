@@ -8,10 +8,12 @@ import kotlin.test.assertNotNull
 class Tests {
     @Test
     fun testNewClient() {
-        val client = BasicClientFactory.new(ClientId.new("aaa"))
-            .setAuthUri(AuthUrl.new("https://example.com/auth"))
-            .setTokenUri(TokenUrl.new("https://example.com/token"))
-            .setClientSecret(ClientSecret.new("bbb"))
+        val client =
+            BasicClientFactory
+                .new(ClientId.new("aaa"))
+                .setAuthUri(AuthUrl.new("https://example.com/auth"))
+                .setTokenUri(TokenUrl.new("https://example.com/token"))
+                .setClientSecret(ClientSecret.new("bbb"))
 
         assertEquals(ClientId.new("aaa"), client.clientId())
         assertEquals(AuthUrl.new("https://example.com/auth"), client.authUrl())

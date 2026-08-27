@@ -3,8 +3,6 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlin.native.HiddenFromObjC
-
 /** A request to the authorization endpoint. */
 public class AuthorizationRequest(
     private val authUrl: AuthUrl,
@@ -17,40 +15,48 @@ public class AuthorizationRequest(
     private var responseType: String = "code"
     private val scopes = mutableListOf<Scope>()
 
-    public fun addScope(scope: Scope): AuthorizationRequest = apply {
-        scopes.add(scope)
-    }
+    public fun addScope(scope: Scope): AuthorizationRequest =
+        apply {
+            scopes.add(scope)
+        }
 
-    public fun addScopes(scopes: Iterable<Scope>): AuthorizationRequest = apply {
-        this.scopes.addAll(scopes)
-    }
+    public fun addScopes(scopes: Iterable<Scope>): AuthorizationRequest =
+        apply {
+            this.scopes.addAll(scopes)
+        }
 
-    public fun addExtraParam(name: String, value: String): AuthorizationRequest = apply {
-        extraParams.add(name to value)
-    }
+    public fun addExtraParam(name: String, value: String): AuthorizationRequest =
+        apply {
+            extraParams.add(name to value)
+        }
 
-    public fun useImplicitFlow(): AuthorizationRequest = apply {
-        this.responseType = "token"
-    }
+    public fun useImplicitFlow(): AuthorizationRequest =
+        apply {
+            this.responseType = "token"
+        }
 
-    public fun setResponseType(responseType: ResponseType): AuthorizationRequest = apply {
-        this.responseType = responseType.value
-    }
+    public fun setResponseType(responseType: ResponseType): AuthorizationRequest =
+        apply {
+            this.responseType = responseType.value
+        }
 
-    public fun setPkceChallenge(pkceCodeChallenge: PkceCodeChallenge): AuthorizationRequest = apply {
-        this.pkceChallenge = pkceCodeChallenge
-    }
+    public fun setPkceChallenge(pkceCodeChallenge: PkceCodeChallenge): AuthorizationRequest =
+        apply {
+            this.pkceChallenge = pkceCodeChallenge
+        }
 
-    public fun setRedirectUri(redirectUrl: RedirectUrl): AuthorizationRequest = apply {
-        this.redirectUrl = redirectUrl
-    }
+    public fun setRedirectUri(redirectUrl: RedirectUrl): AuthorizationRequest =
+        apply {
+            this.redirectUrl = redirectUrl
+        }
 
     public fun url(): Pair<String, CsrfToken> {
-        val pairs = mutableListOf(
-            "response_type" to responseType,
-            "client_id" to clientId.value,
-            "state" to state.secret(),
-        )
+        val pairs =
+            mutableListOf(
+                "response_type" to responseType,
+                "client_id" to clientId.value,
+                "state" to state.secret(),
+            )
 
         pkceChallenge?.let {
             pairs.add("code_challenge" to it.asStr())
@@ -67,17 +73,22 @@ public class AuthorizationRequest(
 
         pairs.addAll(extraParams)
 
-        val queryString = pairs.joinToString("&") { (k, v) ->
-            "${formUrlEncode(k)}=${formUrlEncode(v)}"
-        }
+        val queryString =
+            pairs.joinToString("&") { (k, v) ->
+                "${formUrlEncode(k)}=${formUrlEncode(v)}"
+            }
 
         val baseUrl = authUrl.url()
-        val fullUrl = if (baseUrl.contains("?")) {
-            if (baseUrl.endsWith("?") || baseUrl.endsWith("&")) "$baseUrl$queryString"
-            else "$baseUrl&$queryString"
-        } else {
-            "$baseUrl?$queryString"
-        }
+        val fullUrl =
+            if (baseUrl.contains("?")) {
+                if (baseUrl.endsWith("?") || baseUrl.endsWith("&")) {
+                    "$baseUrl$queryString"
+                } else {
+                    "$baseUrl&$queryString"
+                }
+            } else {
+                "$baseUrl?$queryString"
+            }
 
         return Pair(fullUrl, state)
     }

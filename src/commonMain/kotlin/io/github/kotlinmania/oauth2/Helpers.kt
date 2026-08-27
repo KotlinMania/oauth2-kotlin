@@ -3,12 +3,10 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 /** Case-insensitive untagged enum parser. */
@@ -28,8 +26,11 @@ public fun deserializeOptionalStringOrVecString(element: JsonElement?): List<Str
     if (element == null || element is JsonNull) return null
     return when (element) {
         is JsonPrimitive -> {
-            if (element.isString) listOf(element.content)
-            else emptyList()
+            if (element.isString) {
+                listOf(element.content)
+            } else {
+                emptyList()
+            }
         }
         is JsonArray -> {
             element.map { it.jsonPrimitive.content }

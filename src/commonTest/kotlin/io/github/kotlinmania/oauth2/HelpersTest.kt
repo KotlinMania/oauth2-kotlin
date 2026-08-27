@@ -1,13 +1,12 @@
 // port-lint: tests helpers.rs
 package io.github.kotlinmania.oauth2
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class HelpersTest {
     @Test
@@ -24,10 +23,11 @@ class HelpersTest {
 
     @Test
     fun testDeserializeOptionalStringOrVecStringVec() {
-        val array = buildJsonArray {
-            add(JsonPrimitive("v1"))
-            add(JsonPrimitive("v2"))
-        }
+        val array =
+            buildJsonArray {
+                add(JsonPrimitive("v1"))
+                add(JsonPrimitive("v2"))
+            }
         val result = deserializeOptionalStringOrVecString(array)
         assertEquals(listOf("v1", "v2"), result)
     }

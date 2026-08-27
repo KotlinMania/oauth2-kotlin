@@ -43,72 +43,99 @@ public class Client<
     private val revocationErrorDeserializer: (ByteArray) -> TRE,
 ) {
     public fun clientId(): ClientId = clientId
+
     public fun clientSecret(): ClientSecret? = clientSecret
+
     public fun authType(): AuthType = authType
+
     public fun redirectUri(): RedirectUrl? = redirectUrl
+
     public fun redirectUrl(): RedirectUrl? = redirectUrl
+
     public fun authUri(): AuthUrl? = authUrl
+
     public fun authUrl(): AuthUrl? = authUrl
+
     public fun tokenUri(): TokenUrl? = tokenUrl
+
     public fun tokenUrl(): TokenUrl? = tokenUrl
+
     public fun introspectionUri(): IntrospectionUrl? = introspectionUrl
+
     public fun introspectionUrl(): IntrospectionUrl? = introspectionUrl
+
     public fun revocationUri(): RevocationUrl? = revocationUrl
+
     public fun revocationUrl(): RevocationUrl? = revocationUrl
+
     public fun deviceAuthorizationUri(): DeviceAuthorizationUrl? = deviceAuthorizationUrl
+
     public fun deviceAuthorizationUrl(): DeviceAuthorizationUrl? = deviceAuthorizationUrl
 
-    public fun setAuthType(authType: AuthType): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.authType = authType
-    }
+    public fun setAuthType(authType: AuthType): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.authType = authType
+        }
 
-    public fun setAuthUri(authUrl: AuthUrl): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.authUrl = authUrl
-    }
+    public fun setAuthUri(authUrl: AuthUrl): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.authUrl = authUrl
+        }
 
-    public fun setAuthUriOption(authUrl: AuthUrl?): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.authUrl = authUrl
-    }
+    public fun setAuthUriOption(authUrl: AuthUrl?): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.authUrl = authUrl
+        }
 
-    public fun setClientSecret(clientSecret: ClientSecret): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.clientSecret = clientSecret
-    }
+    public fun setClientSecret(clientSecret: ClientSecret): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.clientSecret = clientSecret
+        }
 
-    public fun setDeviceAuthorizationUrl(deviceAuthorizationUrl: DeviceAuthorizationUrl): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.deviceAuthorizationUrl = deviceAuthorizationUrl
-    }
+    public fun setDeviceAuthorizationUrl(deviceAuthorizationUrl: DeviceAuthorizationUrl): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.deviceAuthorizationUrl = deviceAuthorizationUrl
+        }
 
-    public fun setDeviceAuthorizationUrlOption(deviceAuthorizationUrl: DeviceAuthorizationUrl?): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.deviceAuthorizationUrl = deviceAuthorizationUrl
-    }
+    public fun setDeviceAuthorizationUrlOption(deviceAuthorizationUrl: DeviceAuthorizationUrl?): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.deviceAuthorizationUrl = deviceAuthorizationUrl
+        }
 
-    public fun setIntrospectionUrl(introspectionUrl: IntrospectionUrl): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.introspectionUrl = introspectionUrl
-    }
+    public fun setIntrospectionUrl(introspectionUrl: IntrospectionUrl): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.introspectionUrl = introspectionUrl
+        }
 
-    public fun setIntrospectionUrlOption(introspectionUrl: IntrospectionUrl?): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.introspectionUrl = introspectionUrl
-    }
+    public fun setIntrospectionUrlOption(introspectionUrl: IntrospectionUrl?): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.introspectionUrl = introspectionUrl
+        }
 
-    public fun setRedirectUri(redirectUrl: RedirectUrl): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.redirectUrl = redirectUrl
-    }
+    public fun setRedirectUri(redirectUrl: RedirectUrl): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.redirectUrl = redirectUrl
+        }
 
-    public fun setRevocationUrl(revocationUrl: RevocationUrl): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.revocationUrl = revocationUrl
-    }
+    public fun setRevocationUrl(revocationUrl: RevocationUrl): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.revocationUrl = revocationUrl
+        }
 
-    public fun setRevocationUrlOption(revocationUrl: RevocationUrl?): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.revocationUrl = revocationUrl
-    }
+    public fun setRevocationUrlOption(revocationUrl: RevocationUrl?): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.revocationUrl = revocationUrl
+        }
 
-    public fun setTokenUri(tokenUrl: TokenUrl): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.tokenUrl = tokenUrl
-    }
+    public fun setTokenUri(tokenUrl: TokenUrl): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.tokenUrl = tokenUrl
+        }
 
-    public fun setTokenUriOption(tokenUrl: TokenUrl?): Client<TE, TR, TIR, RT, TRE> = apply {
-        this.tokenUrl = tokenUrl
-    }
+    public fun setTokenUriOption(tokenUrl: TokenUrl?): Client<TE, TR, TIR, RT, TRE> =
+        apply {
+            this.tokenUrl = tokenUrl
+        }
 
     public fun authorizeUrl(stateFn: () -> CsrfToken = { CsrfToken.newRandom() }): AuthorizationRequest {
         val authUri = requireNotNull(authUrl) { "No authorization endpoint URL specified" }
@@ -131,16 +158,17 @@ public class Client<
 
     public fun exchangeCode(code: AuthorizationCode): CodeTokenRequest<TE, TR> {
         val tokUri = requireNotNull(tokenUrl) { "No token endpoint URL specified" }
-        val req = CodeTokenRequest(
-            authType = authType,
-            clientId = clientId,
-            clientSecret = clientSecret,
-            code = code,
-            tokenUrl = tokUri,
-            redirectUrl = redirectUrl,
-            responseDeserializer = tokenResponseDeserializer,
-            errorDeserializer = tokenErrorDeserializer,
-        )
+        val req =
+            CodeTokenRequest(
+                authType = authType,
+                clientId = clientId,
+                clientSecret = clientSecret,
+                code = code,
+                tokenUrl = tokUri,
+                redirectUrl = redirectUrl,
+                responseDeserializer = tokenResponseDeserializer,
+                errorDeserializer = tokenErrorDeserializer,
+            )
         return req
     }
 

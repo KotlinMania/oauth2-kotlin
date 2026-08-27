@@ -10,6 +10,7 @@ import kotlin.native.HiddenFromObjC
  */
 public interface RevocableToken {
     public fun secret(): String
+
     public fun typeHint(): String?
 }
 
@@ -18,16 +19,20 @@ public interface RevocableToken {
  */
 public sealed class StandardRevocableToken : RevocableToken {
     /** A representation of an AccessToken. */
-    public data class AccessToken(public val token: io.github.kotlinmania.oauth2.AccessToken) :
-        StandardRevocableToken() {
+    public data class AccessToken(
+        public val token: io.github.kotlinmania.oauth2.AccessToken,
+    ) : StandardRevocableToken() {
         override fun secret(): String = token.secret()
+
         override fun typeHint(): String? = "access_token"
     }
 
     /** A representation of a RefreshToken. */
-    public data class RefreshToken(public val token: io.github.kotlinmania.oauth2.RefreshToken) :
-        StandardRevocableToken() {
+    public data class RefreshToken(
+        public val token: io.github.kotlinmania.oauth2.RefreshToken,
+    ) : StandardRevocableToken() {
         override fun secret(): String = token.secret()
+
         override fun typeHint(): String? = "refresh_token"
     }
 
@@ -47,12 +52,16 @@ public sealed class RevocationErrorResponseType : ErrorResponseType {
     /** The authorization server does not support the revocation of the presented token type. */
     public data object UnsupportedTokenType : RevocationErrorResponseType() {
         override val value: String get() = "unsupported_token_type"
+
         override fun toString(): String = value
     }
 
     /** The authorization server responded with some other error as defined in RFC 6749. */
-    public data class Basic(public val error: BasicErrorResponseType) : RevocationErrorResponseType() {
+    public data class Basic(
+        public val error: BasicErrorResponseType,
+    ) : RevocationErrorResponseType() {
         override val value: String get() = error.value
+
         override fun toString(): String = value
     }
 
@@ -78,9 +87,10 @@ public class RevocationRequest<RT : RevocableToken, TE : ErrorResponse>(
 ) {
     private val extraParams = mutableListOf<Pair<String, String>>()
 
-    public fun addExtraParam(name: String, value: String): RevocationRequest<RT, TE> = apply {
-        extraParams.add(name to value)
-    }
+    public fun addExtraParam(name: String, value: String): RevocationRequest<RT, TE> =
+        apply {
+            extraParams.add(name to value)
+        }
 
     public fun prepareRequest(): HttpRequest {
         val params = mutableListOf("token" to token.secret())
