@@ -3,8 +3,6 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlin.native.HiddenFromObjC
-
 /** An HTTP request. */
 public data class HttpRequest(
     public val url: String,
@@ -82,10 +80,11 @@ internal fun endpointRequest(
     url: String,
     params: List<Pair<String, String>>,
 ): HttpRequest {
-    val headers = mutableMapOf(
-        "accept" to CONTENT_TYPE_JSON,
-        "content-type" to CONTENT_TYPE_FORMENCODED,
-    )
+    val headers =
+        mutableMapOf(
+            "accept" to CONTENT_TYPE_JSON,
+            "content-type" to CONTENT_TYPE_FORMENCODED,
+        )
 
     val paramList = mutableListOf<Pair<String, String>>()
     paramList.addAll(params)
@@ -116,9 +115,10 @@ internal fun endpointRequest(
 
     paramList.addAll(extraParams)
 
-    val bodyString = paramList.joinToString("&") { (key, value) ->
-        "${formUrlEncode(key)}=${formUrlEncode(value)}"
-    }
+    val bodyString =
+        paramList.joinToString("&") { (key, value) ->
+            "${formUrlEncode(key)}=${formUrlEncode(value)}"
+        }
     val bodyBytes = bodyString.encodeToByteArray()
 
     return HttpRequest(
@@ -174,9 +174,11 @@ internal fun checkResponseStatus(
 }
 
 internal fun checkResponseBody(httpResponse: HttpResponse) {
-    val contentType = httpResponse.headers.entries.firstOrNull {
-        it.key.equals("content-type", ignoreCase = true)
-    }?.value
+    val contentType =
+        httpResponse.headers.entries
+            .firstOrNull {
+                it.key.equals("content-type", ignoreCase = true)
+            }?.value
 
     if (contentType != null && !contentType.lowercase().startsWith(CONTENT_TYPE_JSON)) {
         throw RequestTokenError.Other(

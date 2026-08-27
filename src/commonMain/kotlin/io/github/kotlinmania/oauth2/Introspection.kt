@@ -3,13 +3,13 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlin.native.HiddenFromObjC
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlin.native.HiddenFromObjC
 
 /**
  * Common methods shared by all OAuth2 token introspection implementations.
@@ -70,33 +70,82 @@ public class StandardTokenIntrospectionResponse<EF : ExtraTokenFields, TT : Toke
     private var extraFields: EF,
 ) : TokenIntrospectionResponse {
     override fun active(): Boolean = active
+
     override fun scopes(): List<Scope>? = scopes
+
     override fun clientId(): ClientId? = clientId
+
     override fun username(): String? = username
+
     override fun tokenType(): TT? = tokenType
+
     override fun exp(): Long? = exp
+
     override fun iat(): Long? = iat
+
     override fun nbf(): Long? = nbf
+
     override fun sub(): String? = sub
+
     override fun aud(): List<String>? = aud
+
     override fun iss(): String? = iss
+
     override fun jti(): String? = jti
 
     public fun extraFields(): EF = extraFields
 
-    public fun setActive(active: Boolean) { this.active = active }
-    public fun setScopes(scopes: List<Scope>?) { this.scopes = scopes }
-    public fun setClientId(clientId: ClientId?) { this.clientId = clientId }
-    public fun setUsername(username: String?) { this.username = username }
-    public fun setTokenType(tokenType: TT?) { this.tokenType = tokenType }
-    public fun setExp(exp: Long?) { this.exp = exp }
-    public fun setIat(iat: Long?) { this.iat = iat }
-    public fun setNbf(nbf: Long?) { this.nbf = nbf }
-    public fun setSub(sub: String?) { this.sub = sub }
-    public fun setAud(aud: List<String>?) { this.aud = aud }
-    public fun setIss(iss: String?) { this.iss = iss }
-    public fun setJti(jti: String?) { this.jti = jti }
-    public fun setExtraFields(extraFields: EF) { this.extraFields = extraFields }
+    public fun setActive(active: Boolean) {
+        this.active = active
+    }
+
+    public fun setScopes(scopes: List<Scope>?) {
+        this.scopes = scopes
+    }
+
+    public fun setClientId(clientId: ClientId?) {
+        this.clientId = clientId
+    }
+
+    public fun setUsername(username: String?) {
+        this.username = username
+    }
+
+    public fun setTokenType(tokenType: TT?) {
+        this.tokenType = tokenType
+    }
+
+    public fun setExp(exp: Long?) {
+        this.exp = exp
+    }
+
+    public fun setIat(iat: Long?) {
+        this.iat = iat
+    }
+
+    public fun setNbf(nbf: Long?) {
+        this.nbf = nbf
+    }
+
+    public fun setSub(sub: String?) {
+        this.sub = sub
+    }
+
+    public fun setAud(aud: List<String>?) {
+        this.aud = aud
+    }
+
+    public fun setIss(iss: String?) {
+        this.iss = iss
+    }
+
+    public fun setJti(jti: String?) {
+        this.jti = jti
+    }
+
+    public fun setExtraFields(extraFields: EF) {
+        this.extraFields = extraFields
+    }
 
     public companion object {
         public fun <EF : ExtraTokenFields, TT : TokenType> new(
@@ -114,9 +163,10 @@ public class StandardTokenIntrospectionResponse<EF : ExtraTokenFields, TT : Toke
         ): StandardTokenIntrospectionResponse<EmptyExtraTokenFields, TT> {
             val json = Json.parseToJsonElement(jsonString).jsonObject
             val active = requireNotNull(json["active"]?.jsonPrimitive?.booleanOrNull) { "Missing active" }
-            val scopes: List<Scope>? = json["scope"]?.jsonPrimitive?.contentOrNull?.let { scopeStr ->
-                deserializeSpaceDelimitedVec(scopeStr).map { Scope(it) }
-            }
+            val scopes: List<Scope>? =
+                json["scope"]?.jsonPrimitive?.contentOrNull?.let { scopeStr ->
+                    deserializeSpaceDelimitedVec(scopeStr).map { Scope(it) }
+                }
             val clientId: ClientId? = json["client_id"]?.jsonPrimitive?.contentOrNull?.let { ClientId(it) }
             val username = json["username"]?.jsonPrimitive?.contentOrNull
             val tokenType: TT? = json["token_type"]?.jsonPrimitive?.contentOrNull?.let { tokenTypeFactory(it) }
@@ -161,13 +211,15 @@ public class IntrospectionRequest<TE : ErrorResponse, TIR : TokenIntrospectionRe
     private var tokenTypeHint: String? = null
     private val extraParams = mutableListOf<Pair<String, String>>()
 
-    public fun setTokenTypeHint(value: String): IntrospectionRequest<TE, TIR> = apply {
-        this.tokenTypeHint = value
-    }
+    public fun setTokenTypeHint(value: String): IntrospectionRequest<TE, TIR> =
+        apply {
+            this.tokenTypeHint = value
+        }
 
-    public fun addExtraParam(name: String, value: String): IntrospectionRequest<TE, TIR> = apply {
-        extraParams.add(name to value)
-    }
+    public fun addExtraParam(name: String, value: String): IntrospectionRequest<TE, TIR> =
+        apply {
+            extraParams.add(name to value)
+        }
 
     public fun prepareRequest(): HttpRequest {
         val params = mutableListOf("token" to token.secret())

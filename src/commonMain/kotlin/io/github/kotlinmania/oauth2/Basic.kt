@@ -3,7 +3,6 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlin.native.HiddenFromObjC
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject

@@ -28,7 +28,9 @@ public enum class AuthType {
 
 /** Error configuring a client. */
 @HiddenFromObjC
-public sealed class ConfigurationError(message: String) : Exception(message) {
+public sealed class ConfigurationError(
+    message: String,
+) : Exception(message) {
     /** Insecure (non-HTTPS) URL provided. */
     public class InsecureUrl(
         public val urlType: String,

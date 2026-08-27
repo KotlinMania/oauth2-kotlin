@@ -3,16 +3,14 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlin.native.HiddenFromObjC
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlin.native.HiddenFromObjC
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /** Type of OAuth2 access token. */
 public interface TokenType {
@@ -25,7 +23,9 @@ public interface ExtraTokenFields
 /** Empty (default) extra token fields. */
 public class EmptyExtraTokenFields : ExtraTokenFields {
     override fun equals(other: Any?): Boolean = other is EmptyExtraTokenFields
+
     override fun hashCode(): Int = 0
+
     override fun toString(): String = "EmptyExtraTokenFields"
 }
 
@@ -74,9 +74,13 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
     private var extraFields: EF,
 ) : TokenResponse {
     override fun accessToken(): AccessToken = accessToken
+
     override fun tokenType(): TT = tokenType
+
     override fun expiresIn(): Duration? = expiresInSeconds?.seconds
+
     override fun refreshToken(): RefreshToken? = refreshToken
+
     override fun scopes(): List<Scope>? = scopes
 
     public fun extraFields(): EF = extraFields
@@ -142,16 +146,18 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
             tokenTypeFactory: (String) -> TT,
         ): StandardTokenResponse<EmptyExtraTokenFields, TT> {
             val json = Json.parseToJsonElement(jsonString).jsonObject
-            val accessToken = AccessToken.new(
-                requireNotNull(json["access_token"]?.jsonPrimitive?.contentOrNull) { "Missing access_token" }
-            )
+            val accessToken =
+                AccessToken.new(
+                    requireNotNull(json["access_token"]?.jsonPrimitive?.contentOrNull) { "Missing access_token" },
+                )
             val tokenTypeStr = requireNotNull(json["token_type"]?.jsonPrimitive?.contentOrNull) { "Missing token_type" }
             val tokenType = tokenTypeFactory(tokenTypeStr)
             val expiresIn = json["expires_in"]?.jsonPrimitive?.longOrNull
             val refreshToken = json["refresh_token"]?.jsonPrimitive?.contentOrNull?.let { RefreshToken(it) }
-            val scopes: List<Scope>? = json["scope"]?.jsonPrimitive?.contentOrNull?.let { scopeStr ->
-                deserializeSpaceDelimitedVec(scopeStr).map { Scope(it) }
-            }
+            val scopes: List<Scope>? =
+                json["scope"]?.jsonPrimitive?.contentOrNull?.let { scopeStr ->
+                    deserializeSpaceDelimitedVec(scopeStr).map { Scope(it) }
+                }
 
             return StandardTokenResponse(
                 accessToken = accessToken,
@@ -180,23 +186,27 @@ public class CodeTokenRequest<TE : ErrorResponse, TR : TokenResponse>(
     private val extraParams = mutableListOf<Pair<String, String>>()
     private var pkceVerifier: PkceCodeVerifier? = null
 
-    public fun addExtraParam(name: String, value: String): CodeTokenRequest<TE, TR> = apply {
-        extraParams.add(name to value)
-    }
+    public fun addExtraParam(name: String, value: String): CodeTokenRequest<TE, TR> =
+        apply {
+            extraParams.add(name to value)
+        }
 
-    public fun setPkceVerifier(pkceVerifier: PkceCodeVerifier): CodeTokenRequest<TE, TR> = apply {
-        this.pkceVerifier = pkceVerifier
-    }
+    public fun setPkceVerifier(pkceVerifier: PkceCodeVerifier): CodeTokenRequest<TE, TR> =
+        apply {
+            this.pkceVerifier = pkceVerifier
+        }
 
-    public fun setRedirectUri(redirectUrl: RedirectUrl): CodeTokenRequest<TE, TR> = apply {
-        this.redirectUrl = redirectUrl
-    }
+    public fun setRedirectUri(redirectUrl: RedirectUrl): CodeTokenRequest<TE, TR> =
+        apply {
+            this.redirectUrl = redirectUrl
+        }
 
     public fun prepareRequest(): HttpRequest {
-        val params = mutableListOf(
-            "grant_type" to "authorization_code",
-            "code" to code.secret(),
-        )
+        val params =
+            mutableListOf(
+                "grant_type" to "authorization_code",
+                "code" to code.secret(),
+            )
         pkceVerifier?.let {
             params.add("code_verifier" to it.secret())
         }
@@ -239,23 +249,27 @@ public class RefreshTokenRequest<TE : ErrorResponse, TR : TokenResponse>(
     private val extraParams = mutableListOf<Pair<String, String>>()
     private val scopes = mutableListOf<Scope>()
 
-    public fun addExtraParam(name: String, value: String): RefreshTokenRequest<TE, TR> = apply {
-        extraParams.add(name to value)
-    }
+    public fun addExtraParam(name: String, value: String): RefreshTokenRequest<TE, TR> =
+        apply {
+            extraParams.add(name to value)
+        }
 
-    public fun addScope(scope: Scope): RefreshTokenRequest<TE, TR> = apply {
-        scopes.add(scope)
-    }
+    public fun addScope(scope: Scope): RefreshTokenRequest<TE, TR> =
+        apply {
+            scopes.add(scope)
+        }
 
-    public fun addScopes(scopes: Iterable<Scope>): RefreshTokenRequest<TE, TR> = apply {
-        this.scopes.addAll(scopes)
-    }
+    public fun addScopes(scopes: Iterable<Scope>): RefreshTokenRequest<TE, TR> =
+        apply {
+            this.scopes.addAll(scopes)
+        }
 
     public fun prepareRequest(): HttpRequest {
-        val params = mutableListOf(
-            "grant_type" to "refresh_token",
-            "refresh_token" to refreshToken.secret(),
-        )
+        val params =
+            mutableListOf(
+                "grant_type" to "refresh_token",
+                "refresh_token" to refreshToken.secret(),
+            )
         return endpointRequest(
             authType = authType,
             clientId = clientId,
@@ -296,24 +310,28 @@ public class PasswordTokenRequest<TE : ErrorResponse, TR : TokenResponse>(
     private val extraParams = mutableListOf<Pair<String, String>>()
     private val scopes = mutableListOf<Scope>()
 
-    public fun addExtraParam(name: String, value: String): PasswordTokenRequest<TE, TR> = apply {
-        extraParams.add(name to value)
-    }
+    public fun addExtraParam(name: String, value: String): PasswordTokenRequest<TE, TR> =
+        apply {
+            extraParams.add(name to value)
+        }
 
-    public fun addScope(scope: Scope): PasswordTokenRequest<TE, TR> = apply {
-        scopes.add(scope)
-    }
+    public fun addScope(scope: Scope): PasswordTokenRequest<TE, TR> =
+        apply {
+            scopes.add(scope)
+        }
 
-    public fun addScopes(scopes: Iterable<Scope>): PasswordTokenRequest<TE, TR> = apply {
-        this.scopes.addAll(scopes)
-    }
+    public fun addScopes(scopes: Iterable<Scope>): PasswordTokenRequest<TE, TR> =
+        apply {
+            this.scopes.addAll(scopes)
+        }
 
     public fun prepareRequest(): HttpRequest {
-        val params = mutableListOf(
-            "grant_type" to "password",
-            "username" to username.value,
-            "password" to password.secret(),
-        )
+        val params =
+            mutableListOf(
+                "grant_type" to "password",
+                "username" to username.value,
+                "password" to password.secret(),
+            )
         return endpointRequest(
             authType = authType,
             clientId = clientId,
@@ -352,22 +370,26 @@ public class ClientCredentialsTokenRequest<TE : ErrorResponse, TR : TokenRespons
     private val extraParams = mutableListOf<Pair<String, String>>()
     private val scopes = mutableListOf<Scope>()
 
-    public fun addExtraParam(name: String, value: String): ClientCredentialsTokenRequest<TE, TR> = apply {
-        extraParams.add(name to value)
-    }
+    public fun addExtraParam(name: String, value: String): ClientCredentialsTokenRequest<TE, TR> =
+        apply {
+            extraParams.add(name to value)
+        }
 
-    public fun addScope(scope: Scope): ClientCredentialsTokenRequest<TE, TR> = apply {
-        scopes.add(scope)
-    }
+    public fun addScope(scope: Scope): ClientCredentialsTokenRequest<TE, TR> =
+        apply {
+            scopes.add(scope)
+        }
 
-    public fun addScopes(scopes: Iterable<Scope>): ClientCredentialsTokenRequest<TE, TR> = apply {
-        this.scopes.addAll(scopes)
-    }
+    public fun addScopes(scopes: Iterable<Scope>): ClientCredentialsTokenRequest<TE, TR> =
+        apply {
+            this.scopes.addAll(scopes)
+        }
 
     public fun prepareRequest(): HttpRequest {
-        val params = mutableListOf(
-            "grant_type" to "client_credentials",
-        )
+        val params =
+            mutableListOf(
+                "grant_type" to "client_credentials",
+            )
         return endpointRequest(
             authType = authType,
             clientId = clientId,
