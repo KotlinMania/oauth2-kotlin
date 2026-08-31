@@ -1,4 +1,4 @@
-// port-lint: tests token/mod.rs
+// port-lint: tests oauth2/src/token/mod.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.test.Test
