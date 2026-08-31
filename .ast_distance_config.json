@@ -2,7 +2,7 @@
   "type": "port",
   "name": "oauth2-kotlin",
   "source": {
-    "path": "tmp/oauth2/src",
+    "path": "tmp",
     "lang": "rust"
   },
   "target": {
