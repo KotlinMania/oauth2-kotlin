@@ -1,4 +1,4 @@
-// port-lint: source types.rs
+// port-lint: source oauth2/src/types.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.jvm.JvmInline

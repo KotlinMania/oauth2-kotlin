@@ -1,4 +1,4 @@
-// port-lint: tests introspection.rs
+// port-lint: tests oauth2/src/introspection.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.test.Test

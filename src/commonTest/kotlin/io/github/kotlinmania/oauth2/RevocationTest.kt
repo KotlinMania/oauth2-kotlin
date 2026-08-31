@@ -1,4 +1,4 @@
-// port-lint: tests revocation.rs
+// port-lint: tests oauth2/src/revocation.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.test.Test

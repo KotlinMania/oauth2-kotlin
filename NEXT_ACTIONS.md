@@ -4,18 +4,27 @@ Based on AST analysis, here are the concrete next steps.
 
 ## Summary
 
-- **Files Present:** 12/17 (70.6%)
-- **Function parity:** 173/298 matched (target 387) — 58.1%
-- **Class/type parity:** 49/89 matched (target 109) — 55.1%
-- **Combined symbol parity:** 222/387 matched (target 496) — 57.4%
-- **Average inline-code cosine:** 0.50 (function body across 11 matched files)
-- **Average documentation cosine:** 0.61 (doc text across 11 matched files)
-- **Cheat-zeroed Files:** 2
-- **Critical Issues:** 8 files with <0.60 function similarity
+- **Files Present:** 12/26 (46.2%)
+- **Function parity:** 173/316 matched (target 387) — 54.7%
+- **Class/type parity:** 49/96 matched (target 109) — 51.0%
+- **Combined symbol parity:** 222/412 matched (target 496) — 53.9%
+- **Average inline-code cosine:** 0.45 (function body across 10 matched files)
+- **Average documentation cosine:** 0.62 (doc text across 10 matched files)
+- **Cheat-zeroed Files:** 3
+- **Critical Issues:** 9 files with <0.60 function similarity
 
 ## Priority 1: Fix Incomplete High-Dependency Files
 
-No incomplete high-dependency files detected.
+### 1. oauth2.error
+- **Similarity:** 0.47 (needs 38% improvement)
+- **Dependencies:** 10
+- **Priority Score:** 10011005.0
+- **Functions:** 5/6 matched (target 17)
+- **Missing functions:** `fmt`
+- **Types:** 4/4 matched (target 9)
+- **Missing types:** _none_
+- **Symbol Deficit:** 1 (functions: 1, types: 0)
+- **Action:** Deep review - likely missing major functionality
 
 ## Priority 2: Port Missing High-Value Files
 
@@ -27,19 +36,19 @@ No missing high-value files detected.
 
 Every matched file is listed below with function and type symbol parity.
 
-### 1. error
+### 1. oauth2.error
 
 - **Target:** `oauth2.Error`
 - **Similarity:** 0.47
-- **Dependents:** 8
-- **Priority Score:** 8011005.5
+- **Dependents:** 10
+- **Priority Score:** 10011005.0
 - **Functions:** 5/6 matched (target 17)
 - **Missing functions:** `fmt`
 - **Types:** 4/4 matched (target 9)
 - **Missing types:** _none_
 - **Tests:** 1/1 matched
 
-### 2. helpers
+### 2. oauth2.helpers
 
 - **Target:** `oauth2.Helpers [ZERO]`
 - **Similarity:** 0.00
@@ -51,7 +60,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** `StringOrVec`, `Value`, `NotEnum`, `Result`, `VariantName`, `Ok`, `Error`, `SerializeSeq`, `SerializeTuple`, `SerializeTupleStruct`, `SerializeTupleVariant`, `SerializeMap`, `SerializeStruct`, `SerializeStructVariant`, `Enum`, `ObjectWithOptionalStringOrVecString`
 - **Tests:** 3/3 matched
 
-### 3. devicecode
+### 3. oauth2.devicecode
 
 - **Target:** `oauth2.Devicecode`
 - **Similarity:** 0.36
@@ -63,7 +72,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** `NumOrNull`, `Value`, `IncreasingTime`
 - **Tests:** 7/14 matched
 
-### 4. revocation
+### 4. oauth2.revocation
 
 - **Target:** `oauth2.Revocation`
 - **Similarity:** 0.36
@@ -75,7 +84,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 7/8 matched
 
-### 5. basic
+### 5. oauth2.basic
 
 - **Target:** `oauth2.Basic`
 - **Similarity:** 0.00
@@ -86,7 +95,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 8/8 matched (target 18)
 - **Missing types:** _none_
 
-### 6. endpoint
+### 6. oauth2.endpoint
 
 - **Target:** `oauth2.Endpoint`
 - **Similarity:** 0.50
@@ -109,7 +118,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 9/9 matched (target 10)
 - **Missing types:** _none_
 
-### 8. introspection
+### 8. oauth2.introspection
 
 - **Target:** `oauth2.Introspection`
 - **Similarity:** 0.77
@@ -121,7 +130,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** `TokenType`
 - **Tests:** 2/2 matched
 
-### 9. client
+### 9. oauth2.client
 
 - **Target:** `oauth2.Client`
 - **Similarity:** 0.42
@@ -132,7 +141,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 5/6 matched (target 5)
 - **Missing types:** `EndpointStateSealed`
 
-### 10. code
+### 10. oauth2.code
 
 - **Target:** `oauth2.Code`
 - **Similarity:** 0.79
@@ -144,7 +153,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 10/10 matched
 
-### 11. types
+### 11. oauth2.types
 
 - **Target:** `oauth2.Types`
 - **Similarity:** 0.79
@@ -156,12 +165,12 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 7/7 matched
 
-### 12. lib
+### 12. oauth2.lib
 
-- **Target:** `oauth2.Lib`
-- **Similarity:** 1.00
+- **Target:** `oauth2.Lib [STUB]`
+- **Similarity:** 0.00
 - **Dependents:** 0
-- **Priority Score:** 300.0
+- **Priority Score:** 310.0
 - **Functions:** 0/0 matched
 - **Missing functions:** _none_
 - **Types:** 3/3 matched (target 7)
