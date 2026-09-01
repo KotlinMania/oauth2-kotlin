@@ -6,11 +6,11 @@ Based on AST analysis, here are the concrete next steps.
 
 - **Files Present:** 12/26 (46.2%)
 - **Function parity:** 173/316 matched (target 387) — 54.7%
-- **Class/type parity:** 49/96 matched (target 109) — 51.0%
-- **Combined symbol parity:** 222/412 matched (target 496) — 53.9%
+- **Class/type parity:** 46/93 matched (target 102) — 49.5%
+- **Combined symbol parity:** 219/409 matched (target 489) — 53.5%
 - **Average inline-code cosine:** 0.45 (function body across 10 matched files)
 - **Average documentation cosine:** 0.62 (doc text across 10 matched files)
-- **Cheat-zeroed Files:** 3
+- **Cheat-zeroed Files:** 2
 - **Critical Issues:** 9 files with <0.60 function similarity
 
 ## Priority 1: Fix Incomplete High-Dependency Files
@@ -165,17 +165,6 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 7/7 matched
 
-### 12. oauth2.lib
-
-- **Target:** `oauth2.Lib [STUB]`
-- **Similarity:** 0.00
-- **Dependents:** 0
-- **Priority Score:** 310.0
-- **Functions:** 0/0 matched
-- **Missing functions:** _none_
-- **Types:** 3/3 matched (target 7)
-- **Missing types:** _none_
-
 ## Success Criteria
 
 For each file to be considered "complete":
@@ -184,4 +173,17 @@ For each file to be considered "complete":
 - All tests ported
 - Documentation ported
 - port-lint header present
+
+## Reexport / Wiring Modules
+
+These files match `reexport_modules` patterns in `.ast_distance_config.json`. They are filtered out of
+normal priority and missing-file ladders because they are wiring
+modules, not direct logic ports. Consult them for call-site routing;
+do not treat them as the next implementation target by default.
+
+### Matched
+
+| Source | Target | Path |
+|--------|--------|------|
+| `oauth2.lib` | `oauth2.Lib` | `oauth2/src/lib` |
 
