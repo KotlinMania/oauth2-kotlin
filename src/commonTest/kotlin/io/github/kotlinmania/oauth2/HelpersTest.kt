@@ -1,4 +1,4 @@
-// port-lint: tests oauth2/src/helpers.rs
+// port-lint: tests helpers.rs
 package io.github.kotlinmania.oauth2
 
 import kotlinx.serialization.json.JsonNull
