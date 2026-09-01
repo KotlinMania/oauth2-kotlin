@@ -1,4 +1,4 @@
-// port-lint: tests oauth2/src/endpoint.rs
+// port-lint: tests endpoint.rs
 package io.github.kotlinmania.oauth2
 
 import kotlin.coroutines.Continuation
