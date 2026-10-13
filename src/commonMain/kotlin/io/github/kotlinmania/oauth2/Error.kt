@@ -112,10 +112,12 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
 
     override fun equals(other: Any?): Boolean =
         this === other ||
-            other is StandardErrorResponse<*> &&
-            error == other.error &&
-            errorDescription == other.errorDescription &&
-            errorUri == other.errorUri
+            (
+                other is StandardErrorResponse<*> &&
+                    error == other.error &&
+                    errorDescription == other.errorDescription &&
+                    errorUri == other.errorUri
+            )
 
     override fun hashCode(): Int {
         var result = error.hashCode()
@@ -143,7 +145,7 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
             errorTypeFactory: (String) -> BasicErrorResponseType = { BasicErrorResponseType.fromString(it) },
         ): StandardErrorResponse<BasicErrorResponseType> {
             val json = Json.parseToJsonElement(jsonString).jsonObject
-            val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+            val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
             val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
             val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
             return StandardErrorResponse(errorTypeFactory(errCode), errDesc, errUri)
@@ -190,9 +192,11 @@ public sealed class RequestTokenError(
     ) : RequestTokenError("Failed to parse response: $error") {
         override fun equals(other: Any?): Boolean =
             this === other ||
-                other is Parse &&
-                error == other.error &&
-                responseBody.contentEquals(other.responseBody)
+                (
+                    other is Parse &&
+                        error == other.error &&
+                        responseBody.contentEquals(other.responseBody)
+                )
 
         override fun hashCode(): Int = 31 * error.hashCode() + responseBody.contentHashCode()
     }

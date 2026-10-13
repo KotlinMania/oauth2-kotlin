@@ -32,10 +32,14 @@ public fun deserializeOptionalStringOrVecString(element: JsonElement?): List<Str
                 emptyList()
             }
         }
+
         is JsonArray -> {
             element.map { it.jsonPrimitive.content }
         }
-        else -> null
+
+        else -> {
+            null
+        }
     }
 }
 
@@ -47,4 +51,4 @@ public fun <T> serializeSpaceDelimitedVec(items: List<T>?, toString: (T) -> Stri
 
 /** Returns the lowercase/snake_case variant name for an object/enum. */
 public fun <T : Any> variantName(instance: T): String =
-    instance::class.simpleName?.lowercase() ?: ""
+    instance::class.simpleName?.lowercase().orEmpty()

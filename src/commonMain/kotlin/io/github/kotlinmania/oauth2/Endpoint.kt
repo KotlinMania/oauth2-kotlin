@@ -101,6 +101,7 @@ internal fun endpointRequest(
             val b64 = base64Encode(rawCredentials)
             headers["authorization"] = "Basic $b64"
         }
+
         else -> {
             paramList.add("client_id" to clientId.value)
             if (clientSecret != null) {
@@ -197,8 +198,14 @@ internal fun formUrlEncode(value: String): String =
         for (b in bytes) {
             val byteVal = b.toInt() and 0xFF
             when (val ch = byteVal.toChar()) {
-                in 'a'..'z', in 'A'..'Z', in '0'..'9', '-', '_', '.', '*' -> append(ch)
-                ' ' -> append('+')
+                in 'a'..'z', in 'A'..'Z', in '0'..'9', '-', '_', '.', '*' -> {
+                    append(ch)
+                }
+
+                ' ' -> {
+                    append('+')
+                }
+
                 else -> {
                     append('%')
                     val hex = byteVal.toString(16).uppercase()

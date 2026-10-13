@@ -293,7 +293,7 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
                 val errorResp =
                     try {
                         val json = Json.parseToJsonElement(response.body.decodeToString()).jsonObject
-                        val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
                         val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
                         val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
                         DeviceCodeErrorResponse.new(
@@ -310,12 +310,16 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
                         sleepFn(interval)
                         continue
                     }
+
                     is DeviceCodeErrorResponseType.SlowDown -> {
                         interval += 5.seconds
                         sleepFn(interval)
                         continue
                     }
-                    else -> throw RequestTokenError.ServerResponse(errorResp)
+
+                    else -> {
+                        throw RequestTokenError.ServerResponse(errorResp)
+                    }
                 }
             } else {
                 return endpointResponse(response, responseDeserializer)
@@ -345,7 +349,7 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
                 val errorResp =
                     try {
                         val json = Json.parseToJsonElement(response.body.decodeToString()).jsonObject
-                        val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
                         val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
                         val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
                         DeviceCodeErrorResponse.new(
@@ -362,12 +366,16 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
                         sleepFn(interval)
                         continue
                     }
+
                     is DeviceCodeErrorResponseType.SlowDown -> {
                         interval += 5.seconds
                         sleepFn(interval)
                         continue
                     }
-                    else -> throw RequestTokenError.ServerResponse(errorResp)
+
+                    else -> {
+                        throw RequestTokenError.ServerResponse(errorResp)
+                    }
                 }
             } else {
                 return endpointResponse(response, responseDeserializer)

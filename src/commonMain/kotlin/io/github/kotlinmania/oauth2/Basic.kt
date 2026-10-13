@@ -126,7 +126,7 @@ public object BasicClientFactory {
             },
             tokenErrorDeserializer = { bytes ->
                 val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
-                val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+                val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
                 val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
                 val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
                 BasicErrorResponse.new(BasicErrorResponseType.fromString(errCode), errDesc, errUri)
@@ -138,7 +138,7 @@ public object BasicClientFactory {
             },
             revocationErrorDeserializer = { bytes ->
                 val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
-                val errCode = json["error"]?.jsonPrimitive?.contentOrNull ?: ""
+                val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
                 val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
                 val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
                 BasicRevocationErrorResponse.new(RevocationErrorResponseType.fromString(errCode), errDesc, errUri)
