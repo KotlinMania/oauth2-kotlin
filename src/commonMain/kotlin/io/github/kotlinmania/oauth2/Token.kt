@@ -111,13 +111,15 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
 
     override fun equals(other: Any?): Boolean =
         this === other ||
-            other is StandardTokenResponse<*, *> &&
-            accessToken.secret() == other.accessToken.secret() &&
-            tokenType == other.tokenType &&
-            expiresInSeconds == other.expiresInSeconds &&
-            refreshToken?.secret() == other.refreshToken?.secret() &&
-            scopes == other.scopes &&
-            extraFields == other.extraFields
+            (
+                other is StandardTokenResponse<*, *> &&
+                    accessToken.secret() == other.accessToken.secret() &&
+                    tokenType == other.tokenType &&
+                    expiresInSeconds == other.expiresInSeconds &&
+                    refreshToken?.secret() == other.refreshToken?.secret() &&
+                    scopes == other.scopes &&
+                    extraFields == other.extraFields
+            )
 
     override fun hashCode(): Int {
         var result = accessToken.hashCode()
