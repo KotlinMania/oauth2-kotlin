@@ -164,6 +164,53 @@ class DevicecodeTest {
         assertEquals(BasicTokenType.Bearer, token.tokenType())
     }
 
+    private fun mockTimeFn(): () -> kotlin.time.Duration {
+        var nextSeconds = 0L
+        return {
+            val current = nextSeconds
+            nextSeconds += 1L
+            current.seconds
+        }
+    }
+
+    @Test
+    fun testDeviceTokenAuthorizationTimeout() {
+        val details = newDeviceAuthDetails(2)
+        assertEquals("12345", details.deviceCode().secret())
+        assertEquals("https://verify/here", details.verificationUri().url())
+        assertEquals("abcde", details.userCode().secret())
+        assertEquals("https://verify/here?abcde", details.verificationUriComplete()?.secret())
+        assertEquals(2.seconds, details.expiresIn())
+        assertEquals(1.seconds, details.interval())
+
+        val httpClient =
+            mockHttpClient(
+                expectedUrl = "https://example.com/token",
+                expectedBody = "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+                responseStatus = 400,
+                responseBody =
+                    "{\"error\": \"authorization_pending\", \"error_description\": \"Still waiting for user\"}"
+                        .encodeToByteArray(),
+            )
+
+        val err =
+            assertFailsWith<RequestTokenError.ServerResponse> {
+                newClient()
+                    .exchangeDeviceAccessToken(details)
+                    .setTimeFn(mockTimeFn())
+                    .request(httpClient, sleepFn = {}, timeout = null)
+            }
+        val response = err.typedResponse<DeviceCodeErrorResponse>()
+        assertEquals(
+            DeviceCodeErrorResponse.new<DeviceCodeErrorResponseType>(
+                DeviceCodeErrorResponseType.ExpiredToken,
+                "This device code has expired.",
+                null,
+            ),
+            response,
+        )
+    }
+
     @Test
     fun testDeviceTokenAccessDenied() {
         val details = newDeviceAuthDetails(2)
@@ -239,5 +286,22 @@ class DevicecodeTest {
                 """.trimIndent(),
             )
         assertEquals(10.seconds, response.interval())
+    }
+
+    @Test
+    fun testDeviceAuthResponseNullInterval() {
+        val response =
+            DeviceAuthorizationResponse.fromJsonString(
+                """
+                {
+                    "device_code": "12345",
+                    "verification_uri": "https://verify/here",
+                    "user_code": "abcde",
+                    "expires_in": 300,
+                    "interval": null
+                }
+                """.trimIndent(),
+            )
+        assertEquals(5.seconds, response.interval())
     }
 }

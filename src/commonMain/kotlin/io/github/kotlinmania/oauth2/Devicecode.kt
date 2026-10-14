@@ -11,6 +11,7 @@ import kotlinx.serialization.json.longOrNull
 import kotlin.native.HiddenFromObjC
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 /** Trait for adding extra fields to the DeviceAuthorizationResponse. */
 public interface ExtraDeviceAuthorizationFields
@@ -208,7 +209,7 @@ public class DeviceAuthorizationRequest<TE : ErrorResponse>(
         deserializer: (ByteArray) -> DeviceAuthorizationResponse<EF>,
     ): DeviceAuthorizationResponse<EF> {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeSyncHttpClient(httpClient, request)
         return endpointResponse(response, deserializer, errorDeserializer)
     }
 
@@ -217,7 +218,7 @@ public class DeviceAuthorizationRequest<TE : ErrorResponse>(
         deserializer: (ByteArray) -> DeviceAuthorizationResponse<EF>,
     ): DeviceAuthorizationResponse<EF> {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeAsyncHttpClient(httpClient, request)
         return endpointResponse(response, deserializer, errorDeserializer)
     }
 }
@@ -244,6 +245,8 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
 ) {
     private val extraParams = mutableListOf<Pair<String, String>>()
     private var maxBackoffInterval: Duration? = null
+    private val baseTimeMark = TimeSource.Monotonic.markNow()
+    private var timeFn: () -> Duration = { baseTimeMark.elapsedNow() }
 
     public fun addExtraParam(name: String, value: String): DeviceAccessTokenRequest<TR, EF> =
         apply {
@@ -253,6 +256,11 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
     public fun setMaxBackoffInterval(interval: Duration): DeviceAccessTokenRequest<TR, EF> =
         apply {
             this.maxBackoffInterval = interval
+        }
+
+    public fun setTimeFn(timeFn: () -> Duration): DeviceAccessTokenRequest<TR, EF> =
+        apply {
+            this.timeFn = timeFn
         }
 
     public fun prepareRequest(): HttpRequest =
@@ -276,11 +284,26 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
         sleepFn: (Duration) -> Unit,
         timeout: Duration? = null,
     ): TR {
+        val timeoutDur = timeout ?: devAuthResp.expiresIn()
+        val timeoutDt = timeFn() + timeoutDur
         var interval = devAuthResp.interval()
         while (true) {
+            val now = timeFn()
+            if (now > timeoutDt) {
+                throw RequestTokenError.ServerResponse(
+                    DeviceCodeErrorResponse.new(
+                        DeviceCodeErrorResponseType.ExpiredToken,
+                        "This device code has expired.",
+                        null,
+                    ),
+                )
+            }
+
             val response =
                 try {
                     httpClient.call(prepareRequest())
+                } catch (e: AssertionError) {
+                    throw e
                 } catch (e: Throwable) {
                     val maxBackoff = maxBackoffInterval ?: 10.seconds
                     val newInterval = minOf(interval * 2, maxBackoff)
@@ -332,11 +355,26 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
         sleepFn: suspend (Duration) -> Unit,
         timeout: Duration? = null,
     ): TR {
+        val timeoutDur = timeout ?: devAuthResp.expiresIn()
+        val timeoutDt = timeFn() + timeoutDur
         var interval = devAuthResp.interval()
         while (true) {
+            val now = timeFn()
+            if (now > timeoutDt) {
+                throw RequestTokenError.ServerResponse(
+                    DeviceCodeErrorResponse.new(
+                        DeviceCodeErrorResponseType.ExpiredToken,
+                        "This device code has expired.",
+                        null,
+                    ),
+                )
+            }
+
             val response =
                 try {
                     httpClient.call(prepareRequest())
+                } catch (e: AssertionError) {
+                    throw e
                 } catch (e: Throwable) {
                     val maxBackoff = maxBackoffInterval ?: 10.seconds
                     val newInterval = minOf(interval * 2, maxBackoff)

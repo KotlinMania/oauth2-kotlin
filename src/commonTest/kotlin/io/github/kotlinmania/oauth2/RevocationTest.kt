@@ -147,4 +147,33 @@ class RevocationTest {
             .revokeToken(StandardRevocableToken.from(RefreshToken.new("refresh_token_123")))
             .request(httpClient)
     }
+
+    @Test
+    fun testExtensionTokenRevocationSuccessful() {
+        val client =
+            ColorfulClientFactory
+                .new(ClientId.new("aaa"))
+                .setClientSecret(ClientSecret.new("bbb"))
+                .setAuthUri(AuthUrl.new("https://example.com/auth"))
+                .setTokenUri(TokenUrl.new("https://example.com/token"))
+                .setRevocationUrl(RevocationUrl.new("https://revocation/url"))
+
+        val httpClient =
+            SyncHttpClient { req ->
+                assertEquals("https://revocation/url", req.url)
+                assertEquals("application/json", req.headers["accept"])
+                assertEquals("application/x-www-form-urlencoded", req.headers["content-type"])
+                assertEquals("Basic YWFhOmJiYg==", req.headers["authorization"])
+                assertEquals("token=colorful_token_123&token_type_hint=red_token", req.body.decodeToString())
+                HttpResponse(
+                    status = 200,
+                    headers = mapOf("content-type" to "application/json"),
+                    body = "{}".encodeToByteArray(),
+                )
+            }
+
+        client
+            .revokeToken(ColorfulRevocableToken.Red("colorful_token_123"))
+            .request(httpClient)
+    }
 }

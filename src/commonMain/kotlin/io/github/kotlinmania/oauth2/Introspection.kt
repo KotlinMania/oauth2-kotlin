@@ -240,13 +240,13 @@ public class IntrospectionRequest<TE : ErrorResponse, TIR : TokenIntrospectionRe
 
     public fun request(httpClient: SyncHttpClient): TIR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeSyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 
     public suspend fun requestAsync(httpClient: AsyncHttpClient): TIR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeAsyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 }

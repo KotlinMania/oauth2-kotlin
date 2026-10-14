@@ -4,6 +4,10 @@
 package io.github.kotlinmania.oauth2
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -18,7 +22,9 @@ public interface TokenType {
 }
 
 /** Trait for adding extra fields to the TokenResponse. */
-public interface ExtraTokenFields
+public interface ExtraTokenFields {
+    public fun toJsonFields(): Map<String, JsonElement> = emptyMap()
+}
 
 /** Empty (default) extra token fields. */
 public class EmptyExtraTokenFields : ExtraTokenFields {
@@ -109,6 +115,23 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
         this.extraFields = extraFields
     }
 
+    public fun toJsonString(): String {
+        val obj =
+            buildJsonObject {
+                put("access_token", JsonPrimitive(accessToken.secret()))
+                put("token_type", JsonPrimitive(tokenType.value))
+                expiresInSeconds?.let { put("expires_in", JsonPrimitive(it)) }
+                refreshToken?.let { put("refresh_token", JsonPrimitive(it.secret())) }
+                scopes?.let { list ->
+                    put("scope", JsonPrimitive(list.joinToString(" ") { it.value }))
+                }
+                for ((k, v) in extraFields.toJsonFields()) {
+                    put(k, v)
+                }
+            }
+        return Json.encodeToString(JsonObject.serializer(), obj)
+    }
+
     override fun equals(other: Any?): Boolean =
         this === other ||
             (
@@ -146,20 +169,32 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
         public fun <TT : TokenType> fromJsonString(
             jsonString: String,
             tokenTypeFactory: (String) -> TT,
-        ): StandardTokenResponse<EmptyExtraTokenFields, TT> {
+        ): StandardTokenResponse<EmptyExtraTokenFields, TT> =
+            fromJsonString(jsonString, tokenTypeFactory) { EmptyExtraTokenFields() }
+
+        public fun <EF : ExtraTokenFields, TT : TokenType> fromJsonString(
+            jsonString: String,
+            tokenTypeFactory: (String) -> TT,
+            extraFieldsFactory: (JsonObject) -> EF,
+        ): StandardTokenResponse<EF, TT> {
             val json = Json.parseToJsonElement(jsonString).jsonObject
-            val accessToken =
-                AccessToken.new(
-                    requireNotNull(json["access_token"]?.jsonPrimitive?.contentOrNull) { "Missing access_token" },
-                )
-            val tokenTypeStr = requireNotNull(json["token_type"]?.jsonPrimitive?.contentOrNull) { "Missing token_type" }
-            val tokenType = tokenTypeFactory(tokenTypeStr)
+            val accessTokenPrimitive =
+                requireNotNull(json["access_token"]?.jsonPrimitive) { "Missing access_token" }
+            require(accessTokenPrimitive.isString) { "access_token must be a string" }
+            val accessToken = AccessToken.new(accessTokenPrimitive.content)
+
+            val tokenTypePrimitive =
+                requireNotNull(json["token_type"]?.jsonPrimitive) { "Missing token_type" }
+            require(tokenTypePrimitive.isString) { "token_type must be a string" }
+            val tokenType = tokenTypeFactory(tokenTypePrimitive.content)
+
             val expiresIn = json["expires_in"]?.jsonPrimitive?.longOrNull
             val refreshToken = json["refresh_token"]?.jsonPrimitive?.contentOrNull?.let { RefreshToken(it) }
             val scopes: List<Scope>? =
                 json["scope"]?.jsonPrimitive?.contentOrNull?.let { scopeStr ->
                     deserializeSpaceDelimitedVec(scopeStr).map { Scope(it) }
                 }
+            val extraFields = extraFieldsFactory(json)
 
             return StandardTokenResponse(
                 accessToken = accessToken,
@@ -167,7 +202,7 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
                 expiresInSeconds = expiresIn,
                 refreshToken = refreshToken,
                 scopes = scopes,
-                extraFields = EmptyExtraTokenFields(),
+                extraFields = extraFields,
             )
         }
     }
@@ -226,13 +261,13 @@ public class CodeTokenRequest<TE : ErrorResponse, TR : TokenResponse>(
 
     public fun request(httpClient: SyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeSyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 
     public suspend fun requestAsync(httpClient: AsyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeAsyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 }
@@ -286,13 +321,13 @@ public class RefreshTokenRequest<TE : ErrorResponse, TR : TokenResponse>(
 
     public fun request(httpClient: SyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeSyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 
     public suspend fun requestAsync(httpClient: AsyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeAsyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 }
@@ -348,13 +383,13 @@ public class PasswordTokenRequest<TE : ErrorResponse, TR : TokenResponse>(
 
     public fun request(httpClient: SyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeSyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 
     public suspend fun requestAsync(httpClient: AsyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeAsyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 }
@@ -406,13 +441,13 @@ public class ClientCredentialsTokenRequest<TE : ErrorResponse, TR : TokenRespons
 
     public fun request(httpClient: SyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeSyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 
     public suspend fun requestAsync(httpClient: AsyncHttpClient): TR {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeAsyncHttpClient(httpClient, request)
         return endpointResponse(response, responseDeserializer, errorDeserializer)
     }
 }

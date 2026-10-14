@@ -111,13 +111,13 @@ public class RevocationRequest<RT : RevocableToken, TE : ErrorResponse>(
 
     public fun request(httpClient: SyncHttpClient) {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeSyncHttpClient(httpClient, request)
         endpointResponseStatusOnly(response, errorDeserializer)
     }
 
     public suspend fun requestAsync(httpClient: AsyncHttpClient) {
         val request = prepareRequest()
-        val response = httpClient.call(request)
+        val response = invokeAsyncHttpClient(httpClient, request)
         endpointResponseStatusOnly(response, errorDeserializer)
     }
 }
