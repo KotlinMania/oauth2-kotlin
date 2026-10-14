@@ -49,6 +49,6 @@ public fun <T> serializeSpaceDelimitedVec(items: List<T>?, toString: (T) -> Stri
     return items.joinToString(" ") { toString(it) }
 }
 
-/** Returns the lowercase/snake_case variant name for an object/enum. */
+/** Returns the lowercase variant name for an object or enum. */
 public fun <T : Any> variantName(instance: T): String =
     instance::class.simpleName?.lowercase().orEmpty()

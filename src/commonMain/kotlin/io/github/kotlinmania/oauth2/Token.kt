@@ -23,14 +23,16 @@ public interface TokenType {
 
 /** Trait for adding extra fields to the TokenResponse. */
 public interface ExtraTokenFields {
-    public fun toJsonFields(): Map<String, JsonElement> = emptyMap()
+    public fun appendJsonFields(entries: MutableMap<String, JsonElement>) {
+        if (entries.isEmpty()) return
+    }
 }
 
 /** Empty (default) extra token fields. */
 public class EmptyExtraTokenFields : ExtraTokenFields {
     override fun equals(other: Any?): Boolean = other is EmptyExtraTokenFields
 
-    override fun hashCode(): Int = 0
+    override fun hashCode(): Int = this::class.hashCode()
 
     override fun toString(): String = "EmptyExtraTokenFields"
 }
@@ -51,7 +53,7 @@ public interface TokenResponse {
     public fun tokenType(): TokenType
 
     /**
-     * RECOMMENDED. The lifetime of the access token. If omitted, the authorization server
+     * RECOMMENDED. The validity duration of the access token. If omitted, the authorization server
      * SHOULD provide the expiration time via other means or document the default value.
      */
     public fun expiresIn(): Duration?
@@ -116,6 +118,8 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
     }
 
     public fun toJsonString(): String {
+        val extraEntries = LinkedHashMap<String, JsonElement>()
+        extraFields.appendJsonFields(extraEntries)
         val obj =
             buildJsonObject {
                 put("access_token", JsonPrimitive(accessToken.secret()))
@@ -125,7 +129,7 @@ public class StandardTokenResponse<EF : ExtraTokenFields, TT : TokenType>(
                 scopes?.let { list ->
                     put("scope", JsonPrimitive(list.joinToString(" ") { it.value }))
                 }
-                for ((k, v) in extraFields.toJsonFields()) {
+                for ((k, v) in extraEntries) {
                     put(k, v)
                 }
             }
