@@ -3,6 +3,8 @@
 
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.base64.alphabet.Alphabet
+
 /** An HTTP request. */
 public data class HttpRequest(
     public val url: String,
@@ -217,7 +219,7 @@ internal fun formUrlEncode(value: String): String =
     }
 
 private fun base64Encode(bytes: ByteArray): String {
-    val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    val chars = Alphabet.STANDARD.asString()
     val sb = StringBuilder()
     var i = 0
     while (i < bytes.size) {
