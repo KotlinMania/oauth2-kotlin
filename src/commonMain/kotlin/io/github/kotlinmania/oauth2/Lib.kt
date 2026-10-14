@@ -31,6 +31,11 @@ public enum class AuthType {
 public sealed class ConfigurationError(
     message: String,
 ) : Exception(message) {
+    /** Endpoint URL not specified. */
+    public class MissingUrl(
+        public val urlType: String,
+    ) : ConfigurationError("No $urlType endpoint URL specified")
+
     /** Insecure (non-HTTPS) URL provided. */
     public class InsecureUrl(
         public val urlType: String,
