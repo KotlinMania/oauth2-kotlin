@@ -3,6 +3,7 @@
 
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.thiserror.StdError
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -158,7 +159,8 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
 public sealed class RequestTokenError(
     message: String? = null,
     cause: Throwable? = null,
-) : Exception(message, cause) {
+) : Exception(message, cause),
+    StdError {
     /**
      * Error response returned by authorization server. Contains the parsed `ErrorResponse`
      * returned by the server.

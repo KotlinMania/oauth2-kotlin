@@ -2,9 +2,10 @@
 package io.github.kotlinmania.oauth2
 
 import io.github.kotlinmania.base64.alphabet.Alphabet
+import io.github.kotlinmania.base64.encodedLen
+import io.github.kotlinmania.getrandom.getrandom
 import io.github.kotlinmania.sha2.Sha256
 import kotlin.jvm.JvmInline
-import kotlin.random.Random
 
 /** Client identifier issued to the client during registration. */
 @JvmInline
@@ -261,7 +262,8 @@ public data class PkceCodeChallenge(
         /** Generate a new random, base64-encoded PKCE code verifier. */
         public fun newRandomLen(numBytes: Int): PkceCodeVerifier {
             require(numBytes in 32..96) { "numBytes must be between 32 and 96 inclusive" }
-            val randomBytes = Random.Default.nextBytes(numBytes)
+            val randomBytes = ByteArray(numBytes)
+            getrandom(randomBytes)
             return PkceCodeVerifier.new(base64UrlSafeNoPad(randomBytes))
         }
 
@@ -330,7 +332,8 @@ public class CsrfToken public constructor(
         public fun newRandom(): CsrfToken = newRandomLen(16)
 
         public fun newRandomLen(numBytes: Int): CsrfToken {
-            val randomBytes = Random.Default.nextBytes(numBytes)
+            val randomBytes = ByteArray(numBytes)
+            getrandom(randomBytes)
             return CsrfToken.new(base64UrlSafeNoPad(randomBytes))
         }
     }
@@ -478,7 +481,7 @@ public class UserCode public constructor(
 
 private fun base64UrlSafeNoPad(data: ByteArray): String {
     val chars = Alphabet.URL_SAFE.asString()
-    val sb = StringBuilder((data.size * 4 + 2) / 3)
+    val sb = StringBuilder(encodedLen(data.size, false) ?: ((data.size * 4 + 2) / 3))
     var i = 0
     while (i < data.size) {
         val b0 = data[i++].toInt() and 0xFF

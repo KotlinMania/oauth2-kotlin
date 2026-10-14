@@ -1,6 +1,7 @@
 // port-lint: tests tests.rs
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.thiserror.StdError
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -13,7 +14,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-internal class FakeError : Exception("error")
+internal class FakeError :
+    Exception("error"),
+    StdError
 
 internal enum class ColorfulTokenType(
     override val value: String,
