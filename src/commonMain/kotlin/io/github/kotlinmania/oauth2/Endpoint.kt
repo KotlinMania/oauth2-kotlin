@@ -132,6 +132,34 @@ internal fun endpointRequest(
     )
 }
 
+internal fun invokeSyncHttpClient(
+    httpClient: SyncHttpClient,
+    request: HttpRequest,
+): HttpResponse =
+    try {
+        httpClient.call(request)
+    } catch (e: RequestTokenError) {
+        throw e
+    } catch (e: AssertionError) {
+        throw e
+    } catch (e: Throwable) {
+        throw RequestTokenError.Request(e)
+    }
+
+internal suspend fun invokeAsyncHttpClient(
+    httpClient: AsyncHttpClient,
+    request: HttpRequest,
+): HttpResponse =
+    try {
+        httpClient.call(request)
+    } catch (e: RequestTokenError) {
+        throw e
+    } catch (e: AssertionError) {
+        throw e
+    } catch (e: Throwable) {
+        throw RequestTokenError.Request(e)
+    }
+
 internal fun <DO> endpointResponse(
     httpResponse: HttpResponse,
     deserialize: (ByteArray) -> DO,
@@ -141,7 +169,13 @@ internal fun <DO> endpointResponse(
 ): DO {
     checkResponseStatus(httpResponse, errorDeserialize)
     checkResponseBody(httpResponse)
-    return deserialize(httpResponse.body)
+    return try {
+        deserialize(httpResponse.body)
+    } catch (e: RequestTokenError) {
+        throw e
+    } catch (e: Throwable) {
+        throw RequestTokenError.Parse(e.message ?: "Failed to parse response", httpResponse.body)
+    }
 }
 
 internal fun endpointResponseStatusOnly(

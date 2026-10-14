@@ -13,11 +13,15 @@ public sealed class BasicTokenType : TokenType {
     /** Bearer token. */
     public data object Bearer : BasicTokenType() {
         override val value: String = "bearer"
+
+        override fun toString(): String = value
     }
 
     /** MAC token. */
     public data object Mac : BasicTokenType() {
         override val value: String = "mac"
+
+        override fun toString(): String = value
     }
 
     /** An extension not defined by RFC 6749. */
@@ -25,6 +29,8 @@ public sealed class BasicTokenType : TokenType {
         public val rawValue: String,
     ) : BasicTokenType() {
         override val value: String = rawValue
+
+        override fun toString(): String = value
     }
 
     override fun toString(): String = value
@@ -42,27 +48,41 @@ public sealed class BasicTokenType : TokenType {
 /** Basic access token error types. */
 public sealed class BasicErrorResponseType : ErrorResponseType {
     /** Client authentication failed. */
-    public data object InvalidClient : BasicErrorResponseType()
+    public data object InvalidClient : BasicErrorResponseType() {
+        override fun toString(): String = value
+    }
 
     /** The provided authorization grant or refresh token is invalid. */
-    public data object InvalidGrant : BasicErrorResponseType()
+    public data object InvalidGrant : BasicErrorResponseType() {
+        override fun toString(): String = value
+    }
 
     /** The request is missing a required parameter or is otherwise malformed. */
-    public data object InvalidRequest : BasicErrorResponseType()
+    public data object InvalidRequest : BasicErrorResponseType() {
+        override fun toString(): String = value
+    }
 
     /** The requested scope is invalid, unknown, malformed, or exceeds the granted scope. */
-    public data object InvalidScope : BasicErrorResponseType()
+    public data object InvalidScope : BasicErrorResponseType() {
+        override fun toString(): String = value
+    }
 
     /** The authenticated client is not authorized to use this authorization grant type. */
-    public data object UnauthorizedClient : BasicErrorResponseType()
+    public data object UnauthorizedClient : BasicErrorResponseType() {
+        override fun toString(): String = value
+    }
 
     /** The authorization grant type is not supported by the authorization server. */
-    public data object UnsupportedGrantType : BasicErrorResponseType()
+    public data object UnsupportedGrantType : BasicErrorResponseType() {
+        override fun toString(): String = value
+    }
 
     /** An extension not defined by RFC 6749. */
     public data class Extension(
         public val rawValue: String,
-    ) : BasicErrorResponseType()
+    ) : BasicErrorResponseType() {
+        override fun toString(): String = value
+    }
 
     override val value: String
         get() =
