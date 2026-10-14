@@ -3,6 +3,7 @@
 
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.thiserror.StdError
 import kotlin.native.HiddenFromObjC
 
 public const val CONTENT_TYPE_JSON: String = "application/json"
@@ -30,7 +31,8 @@ public enum class AuthType {
 @HiddenFromObjC
 public sealed class ConfigurationError(
     message: String,
-) : Exception(message) {
+) : Exception(message),
+    StdError {
     /** Endpoint URL not specified. */
     public class MissingUrl(
         public val urlType: String,
@@ -47,7 +49,8 @@ public sealed class ConfigurationError(
 public sealed class HttpClientError(
     message: String? = null,
     cause: Throwable? = null,
-) : Exception(message, cause) {
+) : Exception(message, cause),
+    StdError {
     /** HTTP client error. */
     public class Client(
         public val clientCause: Throwable,

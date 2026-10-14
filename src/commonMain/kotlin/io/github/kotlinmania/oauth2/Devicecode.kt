@@ -3,6 +3,7 @@
 
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.http.StatusCode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -312,7 +313,7 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
                     continue
                 }
 
-            if (response.status != 200) {
+            if (!StatusCode.OK.eq(response.status)) {
                 val errorResp =
                     try {
                         val json = Json.parseToJsonElement(response.body.decodeToString()).jsonObject
@@ -383,7 +384,7 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
                     continue
                 }
 
-            if (response.status != 200) {
+            if (!StatusCode.OK.eq(response.status)) {
                 val errorResp =
                     try {
                         val json = Json.parseToJsonElement(response.body.decodeToString()).jsonObject

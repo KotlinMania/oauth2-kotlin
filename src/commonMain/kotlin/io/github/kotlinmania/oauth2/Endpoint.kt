@@ -4,11 +4,14 @@
 package io.github.kotlinmania.oauth2
 
 import io.github.kotlinmania.base64.alphabet.Alphabet
+import io.github.kotlinmania.base64.encodedLen
+import io.github.kotlinmania.http.Method
+import io.github.kotlinmania.http.StatusCode
 
 /** An HTTP request. */
 public data class HttpRequest(
     public val url: String,
-    public val method: String = "POST",
+    public val method: String = Method.POST.asStr(),
     public val headers: Map<String, String> = emptyMap(),
     public val body: ByteArray = ByteArray(0),
 ) {
@@ -126,7 +129,7 @@ internal fun endpointRequest(
 
     return HttpRequest(
         url = url,
-        method = "POST",
+        method = Method.POST.asStr(),
         headers = headers,
         body = bodyBytes,
     )
@@ -193,7 +196,7 @@ internal fun checkResponseStatus(
         StandardErrorResponse.fromJsonString(bytes.decodeToString())
     },
 ) {
-    if (httpResponse.status != 200) {
+    if (!StatusCode.OK.eq(httpResponse.status)) {
         val reason = httpResponse.body
         if (reason.isEmpty()) {
             throw RequestTokenError.Other("server returned empty error response")
@@ -254,7 +257,7 @@ internal fun formUrlEncode(value: String): String =
 
 private fun base64Encode(bytes: ByteArray): String {
     val chars = Alphabet.STANDARD.asString()
-    val sb = StringBuilder()
+    val sb = StringBuilder(encodedLen(bytes.size, true) ?: ((bytes.size + 2) / 3 * 4))
     var i = 0
     while (i < bytes.size) {
         val b0 = bytes[i++].toInt() and 0xFF

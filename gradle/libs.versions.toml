@@ -10,6 +10,8 @@ ktlint = "14.2.0"
 ktlintEngine = "1.8.0"
 kotlinxBenchmark = "0.5.0"
 base64 = "0.1.0"
+digest = "0.1.0"
+getrandom = "0.1.0"
 http = "0.1.3"
 serde = "0.1.10"
 sha2 = "0.1.0"
@@ -35,6 +37,8 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collectionsImmutable" }
 kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
 base64-kotlin = { module = "io.github.kotlinmania:base64-kotlin", version.ref = "base64" }
+digest-kotlin = { module = "io.github.kotlinmania:digest-kotlin", version.ref = "digest" }
+getrandom-kotlin = { module = "io.github.kotlinmania:getrandom-kotlin", version.ref = "getrandom" }
 http-kotlin = { module = "io.github.kotlinmania:http-kotlin", version.ref = "http" }
 serde-kotlin = { module = "io.github.kotlinmania:serde-kotlin", version.ref = "serde" }
 sha2-kotlin = { module = "io.github.kotlinmania:sha2-kotlin", version.ref = "sha2" }
@@ -51,6 +55,8 @@ oauth2-commonMain = [
   "kotlinx-datetime",
   "collections-immutable",
   "base64-kotlin",
+  "digest-kotlin",
+  "getrandom-kotlin",
   "http-kotlin",
   "serde-kotlin",
   "sha2-kotlin",
