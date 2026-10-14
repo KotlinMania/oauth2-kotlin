@@ -45,13 +45,12 @@ internal data class ColorfulFields(
 
     fun height(): Int = height
 
-    override fun toJsonFields(): Map<String, JsonElement> =
-        buildMap {
-            if (shape != null) {
-                put("shape", JsonPrimitive(shape))
-            }
-            put("height", JsonPrimitive(height))
+    override fun appendJsonFields(entries: MutableMap<String, JsonElement>) {
+        if (shape != null) {
+            entries["shape"] = JsonPrimitive(shape)
         }
+        entries["height"] = JsonPrimitive(height)
+    }
 
     companion object {
         fun fromJsonObject(json: JsonObject): ColorfulFields {
