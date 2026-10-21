@@ -3,12 +3,20 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
+import io.github.kotlinmania.serde.SerdeError
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.BooleanDeserialize
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.I64Deserialize
+import io.github.kotlinmania.serdecore.de.IgnoredAny
+import io.github.kotlinmania.serdecore.de.MapAccess
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.de.Visitor
+import io.github.kotlinmania.serdecore.ser.Serialize
+import io.github.kotlinmania.serdecore.ser.Serializer
+import io.github.kotlinmania.serdejson.fromStr
+import io.github.kotlinmania.serdejson.toStr
 import kotlin.native.HiddenFromObjC
 
 /**
@@ -68,7 +76,8 @@ public class StandardTokenIntrospectionResponse<EF : ExtraTokenFields, TT : Toke
     private var iss: String? = null,
     private var jti: String? = null,
     private var extraFields: EF,
-) : TokenIntrospectionResponse {
+) : TokenIntrospectionResponse,
+    Serialize {
     override fun active(): Boolean = active
 
     override fun scopes(): List<Scope>? = scopes
@@ -147,6 +156,191 @@ public class StandardTokenIntrospectionResponse<EF : ExtraTokenFields, TT : Toke
         this.extraFields = extraFields
     }
 
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> {
+        val sc = scopes
+        val cid = clientId
+        val un = username
+        val tt = tokenType
+        val e = exp
+        val i = iat
+        val nb = nbf
+        val sb = sub
+        val au = aud
+        val is_ = iss
+        val jt = jti
+        var count = 1
+        if (sc != null) count++
+        if (cid != null) count++
+        if (un != null) count++
+        if (tt != null) count++
+        if (e != null) count++
+        if (i != null) count++
+        if (nb != null) count++
+        if (sb != null) count++
+        if (au != null) count++
+        if (is_ != null) count++
+        if (jt != null) count++
+        val struct = serializer.serializeStruct("StandardTokenIntrospectionResponse", count).getOrThrow()
+        struct.serializeField("active", active).getOrThrow()
+        if (sc != null) {
+            struct.serializeField("scope", sc.joinToString(" ") { it.value }).getOrThrow()
+        }
+        if (cid != null) {
+            struct.serializeField("client_id", cid.value).getOrThrow()
+        }
+        if (un != null) {
+            struct.serializeField("username", un).getOrThrow()
+        }
+        if (tt != null) {
+            struct.serializeField("token_type", tt).getOrThrow()
+        }
+        if (e != null) {
+            struct.serializeField("exp", e).getOrThrow()
+        }
+        if (i != null) {
+            struct.serializeField("iat", i).getOrThrow()
+        }
+        if (nb != null) {
+            struct.serializeField("nbf", nb).getOrThrow()
+        }
+        if (sb != null) {
+            struct.serializeField("sub", sb).getOrThrow()
+        }
+        if (au != null) {
+            if (au.size == 1) {
+                struct.serializeField("aud", au[0]).getOrThrow()
+            } else {
+                struct.serializeField("aud", au.joinToString(" ")).getOrThrow()
+            }
+        }
+        if (is_ != null) {
+            struct.serializeField("iss", is_).getOrThrow()
+        }
+        if (jt != null) {
+            struct.serializeField("jti", jt).getOrThrow()
+        }
+        extraFields.appendFields(struct)
+        return struct.end()
+    }
+
+    public fun toJsonString(): String = toStr(this).getOrThrow()
+
+    public class DeserializerImpl<EF : ExtraTokenFields, TT : TokenType>(
+        private val extraFieldsDeserialize: Deserialize<EF>,
+        private val tokenTypeDeserialize: Deserialize<TT>,
+    ) : Deserialize<StandardTokenIntrospectionResponse<EF, TT>> {
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<StandardTokenIntrospectionResponse<EF, TT>> {
+            class VisitorImpl : Visitor<StandardTokenIntrospectionResponse<EF, TT>> {
+                override fun expecting(): String = "struct StandardTokenIntrospectionResponse"
+
+                override fun <A : MapAccess> visitMap(access: A): SerdeResult<StandardTokenIntrospectionResponse<EF, TT>> {
+                    var active: Boolean? = null
+                    var scopes: List<Scope>? = null
+                    var clientId: ClientId? = null
+                    var username: String? = null
+                    var tokenType: TT? = null
+                    var exp: Long? = null
+                    var iat: Long? = null
+                    var nbf: Long? = null
+                    var sub: String? = null
+                    var aud: List<String>? = null
+                    var iss: String? = null
+                    var jti: String? = null
+
+                    while (true) {
+                        val key = access.nextKey(StringDeserialize).getOrThrow() ?: break
+                        when (key) {
+                            "active" -> {
+                                active = access.nextValue(BooleanDeserialize).getOrThrow()
+                            }
+
+                            "scope" -> {
+                                val s = access.nextValue(StringDeserialize).getOrThrow()
+                                scopes = deserializeSpaceDelimitedVec(s).map { Scope.new(it) }
+                            }
+
+                            "client_id" -> {
+                                val s = access.nextValue(StringDeserialize).getOrThrow()
+                                clientId = ClientId.new(s)
+                            }
+
+                            "username" -> {
+                                username = access.nextValue(StringDeserialize).getOrThrow()
+                            }
+
+                            "token_type" -> {
+                                tokenType = access.nextValue(tokenTypeDeserialize).getOrThrow()
+                            }
+
+                            "exp" -> {
+                                exp = access.nextValue(I64Deserialize).getOrThrow()
+                            }
+
+                            "iat" -> {
+                                iat = access.nextValue(I64Deserialize).getOrThrow()
+                            }
+
+                            "nbf" -> {
+                                nbf = access.nextValue(I64Deserialize).getOrThrow()
+                            }
+
+                            "sub" -> {
+                                sub = access.nextValue(StringDeserialize).getOrThrow()
+                            }
+
+                            "aud" -> {
+                                aud =
+                                    access
+                                        .nextValue(
+                                            object : Deserialize<List<String>?> {
+                                                override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<List<String>?> =
+                                                    deserializeOptionalStringOrVecString(deserializer)
+                                            },
+                                        ).getOrThrow()
+                            }
+
+                            "iss" -> {
+                                iss = access.nextValue(StringDeserialize).getOrThrow()
+                            }
+
+                            "jti" -> {
+                                jti = access.nextValue(StringDeserialize).getOrThrow()
+                            }
+
+                            else -> {
+                                access.nextValue(IgnoredAny).getOrThrow()
+                            }
+                        }
+                    }
+                    val act = active ?: return SerdeResult.failure(SerdeError.missingField("active"))
+                    val ef = extraFieldsDeserialize.deserialize(deserializer).getOrThrow()
+                    return SerdeResult.success(
+                        StandardTokenIntrospectionResponse(
+                            active = act,
+                            scopes = scopes,
+                            clientId = clientId,
+                            username = username,
+                            tokenType = tokenType,
+                            exp = exp,
+                            iat = iat,
+                            nbf = nbf,
+                            sub = sub,
+                            aud = aud,
+                            iss = iss,
+                            jti = jti,
+                            extraFields = ef,
+                        ),
+                    )
+                }
+            }
+            return deserializer.deserializeStruct(
+                "StandardTokenIntrospectionResponse",
+                listOf("active", "scope", "client_id", "username", "token_type", "exp", "iat", "nbf", "sub", "aud", "iss", "jti"),
+                VisitorImpl(),
+            )
+        }
+    }
+
     public companion object {
         public fun <EF : ExtraTokenFields, TT : TokenType> new(
             active: Boolean,
@@ -157,42 +351,24 @@ public class StandardTokenIntrospectionResponse<EF : ExtraTokenFields, TT : Toke
                 extraFields = extraFields,
             )
 
+        public fun <EF : ExtraTokenFields, TT : TokenType> deserializer(
+            extraFieldsDeserialize: Deserialize<EF>,
+            tokenTypeDeserialize: Deserialize<TT>,
+        ): Deserialize<StandardTokenIntrospectionResponse<EF, TT>> =
+            DeserializerImpl(extraFieldsDeserialize, tokenTypeDeserialize)
+
         public fun <TT : TokenType> fromJsonString(
             jsonString: String,
             tokenTypeFactory: (String) -> TT,
         ): StandardTokenIntrospectionResponse<EmptyExtraTokenFields, TT> {
-            val json = Json.parseToJsonElement(jsonString).jsonObject
-            val active = requireNotNull(json["active"]?.jsonPrimitive?.booleanOrNull) { "Missing active" }
-            val scopes: List<Scope>? =
-                json["scope"]?.jsonPrimitive?.contentOrNull?.let { scopeStr ->
-                    deserializeSpaceDelimitedVec(scopeStr).map { Scope(it) }
+            val ttDe =
+                object : Deserialize<TT> {
+                    override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<TT> {
+                        val s = StringDeserialize.deserialize(deserializer).getOrThrow()
+                        return SerdeResult.success(tokenTypeFactory(s))
+                    }
                 }
-            val clientId: ClientId? = json["client_id"]?.jsonPrimitive?.contentOrNull?.let { ClientId(it) }
-            val username = json["username"]?.jsonPrimitive?.contentOrNull
-            val tokenType: TT? = json["token_type"]?.jsonPrimitive?.contentOrNull?.let { tokenTypeFactory(it) }
-            val exp = json["exp"]?.jsonPrimitive?.longOrNull
-            val iat = json["iat"]?.jsonPrimitive?.longOrNull
-            val nbf = json["nbf"]?.jsonPrimitive?.longOrNull
-            val sub = json["sub"]?.jsonPrimitive?.contentOrNull
-            val aud = deserializeOptionalStringOrVecString(json["aud"])
-            val iss = json["iss"]?.jsonPrimitive?.contentOrNull
-            val jti = json["jti"]?.jsonPrimitive?.contentOrNull
-
-            return StandardTokenIntrospectionResponse(
-                active = active,
-                scopes = scopes,
-                clientId = clientId,
-                username = username,
-                tokenType = tokenType,
-                exp = exp,
-                iat = iat,
-                nbf = nbf,
-                sub = sub,
-                aud = aud,
-                iss = iss,
-                jti = jti,
-                extraFields = EmptyExtraTokenFields(),
-            )
+            return fromStr(jsonString, deserializer(EmptyExtraTokenFields, ttDe)).getOrThrow()
         }
     }
 }

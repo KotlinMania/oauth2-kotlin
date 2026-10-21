@@ -3,11 +3,18 @@
 
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.serde.SerdeError
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.IgnoredAny
+import io.github.kotlinmania.serdecore.de.MapAccess
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.de.Visitor
+import io.github.kotlinmania.serdecore.de.nullableDeserialize
+import io.github.kotlinmania.serdecore.ser.Serialize
+import io.github.kotlinmania.serdecore.ser.Serializer
 import io.github.kotlinmania.thiserror.StdError
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.native.HiddenFromObjC
 
 /**
@@ -30,10 +37,13 @@ public interface ErrorResponse
  * this error type. This value must match the error type from the relevant OAuth 2.0 standards
  * (RFC 6749 or an extension).
  */
-public interface ErrorResponseType {
+public interface ErrorResponseType : Serialize {
     public val code: String
         get() = value
     public val value: String
+
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> =
+        serializer.serializeStr(value)
 }
 
 /**
@@ -60,7 +70,8 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
      * the error.
      */
     public val errorUri: String? = null,
-) : ErrorResponse {
+) : ErrorResponse,
+    Serialize {
     /**
      * REQUIRED. A single ASCII error code deserialized to the generic parameter
      * `ErrorResponseType`.
@@ -79,23 +90,25 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
      */
     public fun errorUri(): String? = errorUri
 
-    public fun toJsonString(): String =
-        buildString {
-            append("{\"error\":\"")
-            append(error.code)
-            append('"')
-            if (errorDescription != null) {
-                append(",\"error_description\":\"")
-                append(errorDescription)
-                append('"')
-            }
-            if (errorUri != null) {
-                append(",\"error_uri\":\"")
-                append(errorUri)
-                append('"')
-            }
-            append('}')
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> {
+        var count = 1
+        if (errorDescription != null) count++
+        if (errorUri != null) count++
+        val struct = serializer.serializeStruct("StandardErrorResponse", count).getOrThrow()
+        struct.serializeField("error", error).getOrThrow()
+        if (errorDescription != null) {
+            struct.serializeField("error_description", errorDescription).getOrThrow()
         }
+        if (errorUri != null) {
+            struct.serializeField("error_uri", errorUri).getOrThrow()
+        }
+        return struct.end()
+    }
+
+    public fun toJsonString(): String =
+        io.github.kotlinmania.serdejson
+            .toStr(this)
+            .getOrThrow()
 
     override fun toString(): String =
         buildString {
@@ -127,6 +140,38 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
         return result
     }
 
+    public class DeserializerImpl<T : ErrorResponseType>(
+        private val errorTypeDeserialize: Deserialize<T>,
+    ) : Deserialize<StandardErrorResponse<T>> {
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<StandardErrorResponse<T>> {
+            class VisitorImpl : Visitor<StandardErrorResponse<T>> {
+                override fun expecting(): String = "struct StandardErrorResponse"
+
+                override fun <A : MapAccess> visitMap(access: A): SerdeResult<StandardErrorResponse<T>> {
+                    var error: T? = null
+                    var errorDescription: String? = null
+                    var errorUri: String? = null
+                    while (true) {
+                        val key = access.nextKey(StringDeserialize).getOrThrow() ?: break
+                        when (key) {
+                            "error" -> error = access.nextValue(errorTypeDeserialize).getOrThrow()
+                            "error_description" -> errorDescription = access.nextValue(nullableDeserialize(StringDeserialize)).getOrThrow()
+                            "error_uri" -> errorUri = access.nextValue(nullableDeserialize(StringDeserialize)).getOrThrow()
+                            else -> access.nextValue(IgnoredAny).getOrThrow()
+                        }
+                    }
+                    val err = error ?: return SerdeResult.failure(SerdeError.missingField("error"))
+                    return SerdeResult.success(StandardErrorResponse(err, errorDescription, errorUri))
+                }
+            }
+            return deserializer.deserializeStruct(
+                "StandardErrorResponse",
+                listOf("error", "error_description", "error_uri"),
+                VisitorImpl(),
+            )
+        }
+    }
+
     public companion object {
         /**
          * Instantiate a new `StandardErrorResponse`.
@@ -141,15 +186,31 @@ public open class StandardErrorResponse<T : ErrorResponseType>(
             errorUri: String? = null,
         ): StandardErrorResponse<T> = StandardErrorResponse(error, errorDescription, errorUri)
 
+        public fun <T : ErrorResponseType> deserializer(
+            errorTypeDeserialize: Deserialize<T>,
+        ): Deserialize<StandardErrorResponse<T>> = DeserializerImpl(errorTypeDeserialize)
+
         public fun fromJsonString(
             jsonString: String,
-            errorTypeFactory: (String) -> BasicErrorResponseType = { BasicErrorResponseType.fromString(it) },
-        ): StandardErrorResponse<BasicErrorResponseType> {
-            val json = Json.parseToJsonElement(jsonString).jsonObject
-            val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
-            val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
-            val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
-            return StandardErrorResponse(errorTypeFactory(errCode), errDesc, errUri)
+        ): StandardErrorResponse<BasicErrorResponseType> =
+            fromJsonString(jsonString) { BasicErrorResponseType.fromString(it) }
+
+        public fun <T : ErrorResponseType> fromJsonString(
+            jsonString: String,
+            errorTypeFactory: (String) -> T,
+        ): StandardErrorResponse<T> {
+            val ttDe =
+                object : Deserialize<T> {
+                    override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<T> {
+                        val s = StringDeserialize.deserialize(deserializer).getOrThrow()
+                        return SerdeResult.success(errorTypeFactory(s))
+                    }
+                }
+            return io.github.kotlinmania.serdejson
+                .fromStr(
+                    jsonString,
+                    deserializer(ttDe),
+                ).getOrThrow()
         }
     }
 }

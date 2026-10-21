@@ -3,10 +3,12 @@
 
 package io.github.kotlinmania.oauth2
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.ser.Serializer
+import io.github.kotlinmania.serdejson.fromSlice
 
 /** Basic OAuth2 authorization token types. */
 public sealed class BasicTokenType : TokenType {
@@ -33,15 +35,32 @@ public sealed class BasicTokenType : TokenType {
         override fun toString(): String = value
     }
 
-    override fun toString(): String = value
+    public fun asRef(): String =
+        when (this) {
+            Bearer -> "bearer"
+            Mac -> "mac"
+            is Extension -> rawValue
+        }
 
-    public companion object {
-        public fun fromString(value: String): BasicTokenType =
-            when (value.lowercase()) {
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> =
+        serializer.serializeStr(asRef())
+
+    override fun toString(): String = asRef()
+
+    public companion object : Deserialize<BasicTokenType> {
+        public fun fromStr(s: String): BasicTokenType =
+            when (s) {
                 "bearer" -> Bearer
                 "mac" -> Mac
-                else -> Extension(value)
+                else -> Extension(s)
             }
+
+        public fun fromString(value: String): BasicTokenType = fromStr(value.lowercase())
+
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<BasicTokenType> {
+            val variantStr = StringDeserialize.deserialize(deserializer).getOrThrow()
+            return SerdeResult.success(fromStr(variantStr))
+        }
     }
 }
 
@@ -84,31 +103,43 @@ public sealed class BasicErrorResponseType : ErrorResponseType {
         override fun toString(): String = value
     }
 
+    public fun asRef(): String =
+        when (this) {
+            InvalidClient -> "invalid_client"
+            InvalidGrant -> "invalid_grant"
+            InvalidRequest -> "invalid_request"
+            InvalidScope -> "invalid_scope"
+            UnauthorizedClient -> "unauthorized_client"
+            UnsupportedGrantType -> "unsupported_grant_type"
+            is Extension -> rawValue
+        }
+
     override val value: String
-        get() =
-            when (this) {
-                InvalidClient -> "invalid_client"
-                InvalidGrant -> "invalid_grant"
-                InvalidRequest -> "invalid_request"
-                InvalidScope -> "invalid_scope"
-                UnauthorizedClient -> "unauthorized_client"
-                UnsupportedGrantType -> "unsupported_grant_type"
-                is Extension -> rawValue
-            }
+        get() = asRef()
 
-    override fun toString(): String = value
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> =
+        serializer.serializeStr(asRef())
 
-    public companion object {
-        public fun fromString(value: String): BasicErrorResponseType =
-            when (value) {
+    override fun toString(): String = asRef()
+
+    public companion object : Deserialize<BasicErrorResponseType> {
+        public fun fromStr(s: String): BasicErrorResponseType =
+            when (s) {
                 "invalid_client" -> InvalidClient
                 "invalid_grant" -> InvalidGrant
                 "invalid_request" -> InvalidRequest
                 "invalid_scope" -> InvalidScope
                 "unauthorized_client" -> UnauthorizedClient
                 "unsupported_grant_type" -> UnsupportedGrantType
-                else -> Extension(value)
+                else -> Extension(s)
             }
+
+        public fun fromString(value: String): BasicErrorResponseType = fromStr(value)
+
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<BasicErrorResponseType> {
+            val variantStr = StringDeserialize.deserialize(deserializer).getOrThrow()
+            return SerdeResult.success(fromStr(variantStr))
+        }
     }
 }
 
@@ -142,26 +173,28 @@ public object BasicClientFactory {
         Client(
             clientId = clientId,
             tokenResponseDeserializer = { bytes ->
-                StandardTokenResponse.fromJsonString(bytes.decodeToString()) { BasicTokenType.fromString(it) }
+                fromSlice(
+                    bytes,
+                    StandardTokenResponse.deserializer(BasicTokenType, EmptyExtraTokenFields),
+                ).getOrThrow()
             },
             tokenErrorDeserializer = { bytes ->
-                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
-                val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
-                val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
-                BasicErrorResponse.new(BasicErrorResponseType.fromString(errCode), errDesc, errUri)
+                fromSlice(
+                    bytes,
+                    StandardErrorResponse.deserializer(BasicErrorResponseType),
+                ).getOrThrow()
             },
             introspectionResponseDeserializer = { bytes ->
-                StandardTokenIntrospectionResponse.fromJsonString(bytes.decodeToString()) {
-                    BasicTokenType.fromString(it)
-                }
+                fromSlice(
+                    bytes,
+                    StandardTokenIntrospectionResponse.deserializer(EmptyExtraTokenFields, BasicTokenType),
+                ).getOrThrow()
             },
             revocationErrorDeserializer = { bytes ->
-                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
-                val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
-                val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
-                BasicRevocationErrorResponse.new(RevocationErrorResponseType.fromString(errCode), errDesc, errUri)
+                fromSlice(
+                    bytes,
+                    StandardErrorResponse.deserializer(RevocationErrorResponseType),
+                ).getOrThrow()
             },
         )
 }

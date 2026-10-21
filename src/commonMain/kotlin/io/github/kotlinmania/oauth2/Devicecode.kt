@@ -4,26 +4,71 @@
 package io.github.kotlinmania.oauth2
 
 import io.github.kotlinmania.http.StatusCode
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
+import io.github.kotlinmania.serde.SerdeError
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.I64Deserialize
+import io.github.kotlinmania.serdecore.de.IgnoredAny
+import io.github.kotlinmania.serdecore.de.MapAccess
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.de.Visitor
+import io.github.kotlinmania.serdecore.ser.Serialize
+import io.github.kotlinmania.serdecore.ser.SerializeStruct
+import io.github.kotlinmania.serdecore.ser.Serializer
+import io.github.kotlinmania.serdejson.fromSlice
+import io.github.kotlinmania.serdejson.fromStr
+import io.github.kotlinmania.serdejson.toStr
 import kotlin.native.HiddenFromObjC
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
+/**
+ * The minimum amount of time in seconds that the client SHOULD wait
+ * between polling requests to the token endpoint. If no value is
+ * provided, clients MUST use 5 as the default.
+ */
+public fun defaultDevicecodeInterval(): ULong = 5uL
+
+public fun <D : Deserializer> deserializeDevicecodeInterval(deserializer: D): SerdeResult<ULong> {
+    class NumOrNull : Visitor<ULong> {
+        override fun expecting(): String = "non-negative integer or null"
+
+        override fun visitU64(v: ULong): SerdeResult<ULong> = SerdeResult.success(v)
+
+        override fun visitI64(v: Long): SerdeResult<ULong> =
+            if (v >= 0) SerdeResult.success(v.toULong()) else SerdeResult.failure(SerdeError.custom("negative integer"))
+
+        override fun visitUnit(): SerdeResult<ULong> = SerdeResult.success(defaultDevicecodeInterval())
+
+        override fun visitNone(): SerdeResult<ULong> = SerdeResult.success(defaultDevicecodeInterval())
+    }
+    return deserializer.deserializeAny(NumOrNull())
+}
+
 /** Trait for adding extra fields to the DeviceAuthorizationResponse. */
-public interface ExtraDeviceAuthorizationFields
+public interface ExtraDeviceAuthorizationFields : Serialize {
+    public fun <Ok> appendFields(struct: SerializeStruct<Ok>) {}
+}
 
 /** Empty (default) extra token fields. */
 public class EmptyExtraDeviceAuthorizationFields : ExtraDeviceAuthorizationFields {
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> {
+        val s = serializer.serializeStruct("EmptyExtraDeviceAuthorizationFields", 0).getOrThrow()
+        return s.end()
+    }
+
     override fun equals(other: Any?): Boolean = other is EmptyExtraDeviceAuthorizationFields
 
     override fun hashCode(): Int = 0
 
     override fun toString(): String = "EmptyExtraDeviceAuthorizationFields"
+
+    public companion object : Deserialize<EmptyExtraDeviceAuthorizationFields> {
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<EmptyExtraDeviceAuthorizationFields> =
+            SerdeResult.success(EmptyExtraDeviceAuthorizationFields())
+    }
 }
 
 /** Standard OAuth2 device authorization response. */
@@ -36,7 +81,7 @@ public class DeviceAuthorizationResponse<EF : ExtraDeviceAuthorizationFields>(
     private val expiresInSeconds: Long,
     private val intervalSeconds: Long = 5,
     private val extraFields: EF,
-) {
+) : Serialize {
     public fun deviceCode(): DeviceCode = deviceCode
 
     public fun userCode(): UserCode = userCode
@@ -50,6 +95,24 @@ public class DeviceAuthorizationResponse<EF : ExtraDeviceAuthorizationFields>(
     public fun interval(): Duration = intervalSeconds.seconds
 
     public fun extraFields(): EF = extraFields
+
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> {
+        var count = 4
+        if (verificationUriComplete != null) count++
+        val struct = serializer.serializeStruct("DeviceAuthorizationResponse", count).getOrThrow()
+        struct.serializeField("device_code", deviceCode.secret()).getOrThrow()
+        struct.serializeField("user_code", userCode.secret()).getOrThrow()
+        struct.serializeField("verification_uri", verificationUri.url()).getOrThrow()
+        if (verificationUriComplete != null) {
+            struct.serializeField("verification_uri_complete", verificationUriComplete.secret()).getOrThrow()
+        }
+        struct.serializeField("expires_in", expiresInSeconds).getOrThrow()
+        struct.serializeField("interval", intervalSeconds).getOrThrow()
+        extraFields.appendFields(struct)
+        return struct.end()
+    }
+
+    public fun toJsonString(): String = toStr(this).getOrThrow()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -75,41 +138,100 @@ public class DeviceAuthorizationResponse<EF : ExtraDeviceAuthorizationFields>(
         return result
     }
 
-    public companion object {
-        public fun fromJsonString(
-            jsonString: String,
-        ): DeviceAuthorizationResponse<EmptyExtraDeviceAuthorizationFields> {
-            val json = Json.parseToJsonElement(jsonString).jsonObject
-            val deviceCode =
-                DeviceCode.new(
-                    requireNotNull(json["device_code"]?.jsonPrimitive?.contentOrNull) { "Missing device_code" },
-                )
-            val userCode =
-                UserCode.new(
-                    requireNotNull(json["user_code"]?.jsonPrimitive?.contentOrNull) { "Missing user_code" },
-                )
-            val uriStr =
-                json["verification_uri"]?.jsonPrimitive?.contentOrNull
-                    ?: json["verification_url"]?.jsonPrimitive?.contentOrNull
-                    ?: throw IllegalArgumentException("Missing verification_uri / verification_url")
-            val verificationUri = EndUserVerificationUrl.new(uriStr)
-            val verificationUriComplete =
-                json["verification_uri_complete"]?.jsonPrimitive?.contentOrNull?.let {
-                    VerificationUriComplete.new(it)
-                }
-            val expiresIn = requireNotNull(json["expires_in"]?.jsonPrimitive?.longOrNull) { "Missing expires_in" }
-            val interval = json["interval"]?.jsonPrimitive?.longOrNull ?: 5L
+    public class DeserializerImpl<EF : ExtraDeviceAuthorizationFields>(
+        private val extraFieldsDeserialize: Deserialize<EF>,
+    ) : Deserialize<DeviceAuthorizationResponse<EF>> {
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<DeviceAuthorizationResponse<EF>> {
+            class VisitorImpl : Visitor<DeviceAuthorizationResponse<EF>> {
+                override fun expecting(): String = "struct DeviceAuthorizationResponse"
 
-            return DeviceAuthorizationResponse(
-                deviceCode = deviceCode,
-                userCode = userCode,
-                verificationUri = verificationUri,
-                verificationUriComplete = verificationUriComplete,
-                expiresInSeconds = expiresIn,
-                intervalSeconds = interval,
-                extraFields = EmptyExtraDeviceAuthorizationFields(),
+                override fun <A : MapAccess> visitMap(access: A): SerdeResult<DeviceAuthorizationResponse<EF>> {
+                    var deviceCode: DeviceCode? = null
+                    var userCode: UserCode? = null
+                    var verificationUri: EndUserVerificationUrl? = null
+                    var verificationUriComplete: VerificationUriComplete? = null
+                    var expiresIn: Long? = null
+                    var interval: Long = 5L
+
+                    while (true) {
+                        val key = access.nextKey(StringDeserialize).getOrThrow() ?: break
+                        when (key) {
+                            "device_code" -> {
+                                val s = access.nextValue(StringDeserialize).getOrThrow()
+                                deviceCode = DeviceCode.new(s)
+                            }
+
+                            "user_code" -> {
+                                val s = access.nextValue(StringDeserialize).getOrThrow()
+                                userCode = UserCode.new(s)
+                            }
+
+                            "verification_uri", "verification_url" -> {
+                                val s = access.nextValue(StringDeserialize).getOrThrow()
+                                verificationUri = EndUserVerificationUrl.new(s)
+                            }
+
+                            "verification_uri_complete" -> {
+                                val s = access.nextValue(StringDeserialize).getOrThrow()
+                                verificationUriComplete = VerificationUriComplete.new(s)
+                            }
+
+                            "expires_in" -> {
+                                expiresIn = access.nextValue(I64Deserialize).getOrThrow()
+                            }
+
+                            "interval" -> {
+                                val u =
+                                    access
+                                        .nextValue(
+                                            object : Deserialize<ULong> {
+                                                override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<ULong> =
+                                                    deserializeDevicecodeInterval(deserializer)
+                                            },
+                                        ).getOrThrow()
+                                interval = u.toLong()
+                            }
+
+                            else -> {
+                                access.nextValue(IgnoredAny).getOrThrow()
+                            }
+                        }
+                    }
+                    val dc = deviceCode ?: return SerdeResult.failure(SerdeError.missingField("device_code"))
+                    val uc = userCode ?: return SerdeResult.failure(SerdeError.missingField("user_code"))
+                    val vu = verificationUri ?: return SerdeResult.failure(SerdeError.missingField("verification_uri"))
+                    val exp = expiresIn ?: return SerdeResult.failure(SerdeError.missingField("expires_in"))
+                    val ef = extraFieldsDeserialize.deserialize(deserializer).getOrThrow()
+                    return SerdeResult.success(
+                        DeviceAuthorizationResponse(
+                            deviceCode = dc,
+                            userCode = uc,
+                            verificationUri = vu,
+                            verificationUriComplete = verificationUriComplete,
+                            expiresInSeconds = exp,
+                            intervalSeconds = interval,
+                            extraFields = ef,
+                        ),
+                    )
+                }
+            }
+            return deserializer.deserializeStruct(
+                "DeviceAuthorizationResponse",
+                listOf("device_code", "user_code", "verification_uri", "verification_uri_complete", "expires_in", "interval"),
+                VisitorImpl(),
             )
         }
+    }
+
+    public companion object {
+        public fun <EF : ExtraDeviceAuthorizationFields> deserializer(
+            extraFieldsDeserialize: Deserialize<EF>,
+        ): Deserialize<DeviceAuthorizationResponse<EF>> = DeserializerImpl(extraFieldsDeserialize)
+
+        public fun fromJsonString(
+            jsonString: String,
+        ): DeviceAuthorizationResponse<EmptyExtraDeviceAuthorizationFields> =
+            fromStr(jsonString, deserializer(EmptyExtraDeviceAuthorizationFields)).getOrThrow()
     }
 }
 
@@ -146,20 +268,41 @@ public sealed class DeviceCodeErrorResponseType : ErrorResponseType {
     public data class Basic(
         public val error: BasicErrorResponseType,
     ) : DeviceCodeErrorResponseType() {
-        override val value: String get() = error.value
+        override val value: String get() = error.asRef()
 
         override fun toString(): String = value
     }
 
-    public companion object {
-        public fun fromString(s: String): DeviceCodeErrorResponseType =
+    public fun asRef(): String =
+        when (this) {
+            AuthorizationPending -> "authorization_pending"
+            SlowDown -> "slow_down"
+            AccessDenied -> "access_denied"
+            ExpiredToken -> "expired_token"
+            is Basic -> error.asRef()
+        }
+
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> =
+        serializer.serializeStr(asRef())
+
+    override fun toString(): String = asRef()
+
+    public companion object : Deserialize<DeviceCodeErrorResponseType> {
+        public fun fromStr(s: String): DeviceCodeErrorResponseType =
             when (s) {
                 "authorization_pending" -> AuthorizationPending
                 "slow_down" -> SlowDown
                 "access_denied" -> AccessDenied
                 "expired_token" -> ExpiredToken
-                else -> Basic(BasicErrorResponseType.fromString(s))
+                else -> Basic(BasicErrorResponseType.fromStr(s))
             }
+
+        public fun fromString(s: String): DeviceCodeErrorResponseType = fromStr(s)
+
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<DeviceCodeErrorResponseType> {
+            val variantStr = StringDeserialize.deserialize(deserializer).getOrThrow()
+            return SerdeResult.success(fromStr(variantStr))
+        }
     }
 }
 
@@ -316,15 +459,10 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
             if (!StatusCode.OK.eq(response.status)) {
                 val errorResp =
                     try {
-                        val json = Json.parseToJsonElement(response.body.decodeToString()).jsonObject
-                        val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                        val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
-                        val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
-                        DeviceCodeErrorResponse.new(
-                            DeviceCodeErrorResponseType.fromString(errCode),
-                            errDesc,
-                            errUri,
-                        )
+                        fromSlice(
+                            response.body,
+                            DeviceCodeErrorResponse.deserializer(DeviceCodeErrorResponseType),
+                        ).getOrThrow()
                     } catch (e: Throwable) {
                         throw RequestTokenError.Parse(e.message ?: "Failed to parse error", response.body)
                     }
@@ -387,15 +525,10 @@ public class DeviceAccessTokenRequest<TR : TokenResponse, EF : ExtraDeviceAuthor
             if (!StatusCode.OK.eq(response.status)) {
                 val errorResp =
                     try {
-                        val json = Json.parseToJsonElement(response.body.decodeToString()).jsonObject
-                        val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                        val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
-                        val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
-                        DeviceCodeErrorResponse.new(
-                            DeviceCodeErrorResponseType.fromString(errCode),
-                            errDesc,
-                            errUri,
-                        )
+                        fromSlice(
+                            response.body,
+                            DeviceCodeErrorResponse.deserializer(DeviceCodeErrorResponseType),
+                        ).getOrThrow()
                     } catch (e: Throwable) {
                         throw RequestTokenError.Parse(e.message ?: "Failed to parse error", response.body)
                     }

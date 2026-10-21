@@ -3,6 +3,11 @@
 
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.ser.Serializer
 import kotlin.native.HiddenFromObjC
 
 /**
@@ -60,18 +65,36 @@ public sealed class RevocationErrorResponseType : ErrorResponseType {
     public data class Basic(
         public val error: BasicErrorResponseType,
     ) : RevocationErrorResponseType() {
-        override val value: String get() = error.value
+        override val value: String get() = error.asRef()
 
         override fun toString(): String = value
     }
 
-    public companion object {
-        public fun fromString(s: String): RevocationErrorResponseType =
+    public fun asRef(): String =
+        when (this) {
+            UnsupportedTokenType -> "unsupported_token_type"
+            is Basic -> error.asRef()
+        }
+
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> =
+        serializer.serializeStr(asRef())
+
+    override fun toString(): String = asRef()
+
+    public companion object : Deserialize<RevocationErrorResponseType> {
+        public fun fromStr(s: String): RevocationErrorResponseType =
             if (s == "unsupported_token_type") {
                 UnsupportedTokenType
             } else {
-                Basic(BasicErrorResponseType.fromString(s))
+                Basic(BasicErrorResponseType.fromStr(s))
             }
+
+        public fun fromString(s: String): RevocationErrorResponseType = fromStr(s)
+
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<RevocationErrorResponseType> {
+            val variantStr = StringDeserialize.deserialize(deserializer).getOrThrow()
+            return SerdeResult.success(fromStr(variantStr))
+        }
     }
 }
 

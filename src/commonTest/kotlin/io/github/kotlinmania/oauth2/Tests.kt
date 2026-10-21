@@ -1,15 +1,21 @@
 // port-lint: tests tests.rs
 package io.github.kotlinmania.oauth2
 
+import io.github.kotlinmania.serde.SerdeError
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.I32Deserialize
+import io.github.kotlinmania.serdecore.de.IgnoredAny
+import io.github.kotlinmania.serdecore.de.MapAccess
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.de.Visitor
+import io.github.kotlinmania.serdecore.ser.SerializeStruct
+import io.github.kotlinmania.serdecore.ser.Serializer
+import io.github.kotlinmania.serdejson.JsonMap
+import io.github.kotlinmania.serdejson.Value
+import io.github.kotlinmania.serdejson.fromSlice
 import io.github.kotlinmania.thiserror.StdError
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -27,13 +33,20 @@ internal enum class ColorfulTokenType(
 
     override fun toString(): String = value
 
-    companion object {
-        fun fromString(s: String): ColorfulTokenType =
+    companion object : Deserialize<ColorfulTokenType> {
+        fun fromStr(s: String): ColorfulTokenType =
             when (s.lowercase()) {
                 "green" -> Green
                 "red" -> Red
                 else -> throw IllegalArgumentException("Unknown ColorfulTokenType: $s")
             }
+
+        fun fromString(s: String): ColorfulTokenType = fromStr(s)
+
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<ColorfulTokenType> {
+            val s = StringDeserialize.deserialize(deserializer).getOrThrow()
+            return SerdeResult.success(fromStr(s))
+        }
     }
 }
 
@@ -45,18 +58,49 @@ internal data class ColorfulFields(
 
     fun height(): Int = height
 
-    override fun appendJsonFields(entries: MutableMap<String, JsonElement>) {
+    override fun <Ok> appendFields(struct: SerializeStruct<Ok>) {
         if (shape != null) {
-            entries["shape"] = JsonPrimitive(shape)
+            struct.serializeField("shape", shape)
         }
-        entries["height"] = JsonPrimitive(height)
+        struct.serializeField("height", height)
     }
 
-    companion object {
-        fun fromJsonObject(json: JsonObject): ColorfulFields {
-            val shape = json["shape"]?.jsonPrimitive?.takeIf { it.isString }?.contentOrNull
-            val height = requireNotNull(json["height"]?.jsonPrimitive?.intOrNull) { "Missing height" }
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> {
+        val count = (if (shape != null) 1 else 0) + 1
+        val struct = serializer.serializeStruct("ColorfulFields", count).getOrThrow()
+        appendFields(struct)
+        return struct.end()
+    }
+
+    companion object : Deserialize<ColorfulFields> {
+        fun fromJsonObject(obj: Value.Object): ColorfulFields {
+            val shape = (obj.get("shape") as? Value.Str)?.value
+            val height =
+                (obj.get("height") as? Value.Number)?.value?.asI64()?.toInt()
+                    ?: throw IllegalArgumentException("Missing height")
             return ColorfulFields(shape = shape, height = height)
+        }
+
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<ColorfulFields> {
+            class VisitorImpl : Visitor<ColorfulFields> {
+                override fun expecting(): String = "struct ColorfulFields"
+
+                override fun <A : MapAccess> visitMap(access: A): SerdeResult<ColorfulFields> {
+                    var shape: String? = null
+                    var height: Int? = null
+                    while (true) {
+                        val key = access.nextKey(StringDeserialize).getOrThrow() ?: break
+                        when (key) {
+                            "shape" -> shape = access.nextValue(StringDeserialize).getOrThrow()
+                            "height" -> height = access.nextValue(I32Deserialize).getOrThrow()
+                            else -> access.nextValue(IgnoredAny).getOrThrow()
+                        }
+                    }
+                    val h = height ?: return SerdeResult.failure(SerdeError.missingField("height"))
+                    return SerdeResult.success(ColorfulFields(shape = shape, height = h))
+                }
+            }
+            return deserializer.deserializeStruct("ColorfulFields", listOf("shape", "height"), VisitorImpl())
         }
     }
 }
@@ -71,14 +115,21 @@ internal enum class ColorfulErrorResponseType(
 
     override fun toString(): String = value
 
-    companion object {
-        fun fromString(s: String): ColorfulErrorResponseType =
+    companion object : Deserialize<ColorfulErrorResponseType> {
+        fun fromStr(s: String): ColorfulErrorResponseType =
             when (s) {
                 "too_dark" -> TooDark
                 "too_light" -> TooLight
                 "wrong_color_space" -> WrongColorSpace
                 else -> throw IllegalArgumentException("Unknown ColorfulErrorResponseType: $s")
             }
+
+        fun fromString(s: String): ColorfulErrorResponseType = fromStr(s)
+
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<ColorfulErrorResponseType> {
+            val s = StringDeserialize.deserialize(deserializer).getOrThrow()
+            return SerdeResult.success(fromStr(s))
+        }
     }
 }
 
@@ -114,18 +165,13 @@ internal object ColorfulClientFactory {
                 )
             },
             tokenErrorDeserializer = { bytes ->
-                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
-                val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
-                val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
-                StandardErrorResponse.new(
-                    ColorfulErrorResponseType.fromString(errCode),
-                    errDesc,
-                    errUri,
-                )
+                StandardErrorResponse.fromJsonString(bytes.decodeToString()) {
+                    ColorfulErrorResponseType.fromString(it)
+                }
             },
             introspectionResponseDeserializer = { bytes ->
-                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
+                val outcome = fromSlice(bytes).getOrThrow()
+                val json = outcome.asObject() ?: JsonMap()
                 val base =
                     StandardTokenIntrospectionResponse.fromJsonString(bytes.decodeToString()) {
                         ColorfulTokenType.fromString(it)
@@ -143,19 +189,13 @@ internal object ColorfulClientFactory {
                     aud = base.aud(),
                     iss = base.iss(),
                     jti = base.jti(),
-                    extraFields = ColorfulFields.fromJsonObject(json),
+                    extraFields = ColorfulFields.fromJsonObject(Value.Object(json)),
                 )
             },
             revocationErrorDeserializer = { bytes ->
-                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
-                val errCode = json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                val errDesc = json["error_description"]?.jsonPrimitive?.contentOrNull
-                val errUri = json["error_uri"]?.jsonPrimitive?.contentOrNull
-                StandardErrorResponse.new(
-                    ColorfulErrorResponseType.fromString(errCode),
-                    errDesc,
-                    errUri,
-                )
+                StandardErrorResponse.fromJsonString(bytes.decodeToString()) {
+                    ColorfulErrorResponseType.fromString(it)
+                }
             },
         )
 }

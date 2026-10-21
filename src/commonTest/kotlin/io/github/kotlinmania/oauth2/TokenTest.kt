@@ -1,10 +1,19 @@
-// port-lint: tests token/mod.rs
 package io.github.kotlinmania.oauth2
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import io.github.kotlinmania.serde.SerdeError
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.IgnoredAny
+import io.github.kotlinmania.serdecore.de.MapAccess
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.de.Visitor
+import io.github.kotlinmania.serdecore.ser.Serialize
+import io.github.kotlinmania.serdecore.ser.Serializer
+import io.github.kotlinmania.serdejson.JsonMap
+import io.github.kotlinmania.serdejson.Value
+import io.github.kotlinmania.serdejson.fromSlice
+import io.github.kotlinmania.serdejson.fromStr
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -15,16 +24,43 @@ import kotlin.time.Duration.Companion.seconds
 
 internal data class CustomErrorResponse(
     val customError: String,
-) : ErrorResponse {
+) : ErrorResponse,
+    Serialize {
     override fun toString(): String = "Custom Error from server"
 
-    companion object {
-        fun fromJsonString(jsonString: String): CustomErrorResponse {
-            val json = Json.parseToJsonElement(jsonString).jsonObject
-            val customError =
-                requireNotNull(json["custom_error"]?.jsonPrimitive?.contentOrNull) { "Missing custom_error" }
-            return CustomErrorResponse(customError)
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> {
+        val s = serializer.serializeStruct("CustomErrorResponse", 1).getOrThrow()
+        s.serializeField("custom_error", customError).getOrThrow()
+        return s.end()
+    }
+
+    companion object : Deserialize<CustomErrorResponse> {
+        override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<CustomErrorResponse> {
+            class VisitorImpl : Visitor<CustomErrorResponse> {
+                override fun expecting(): String = "struct CustomErrorResponse"
+
+                override fun <A : MapAccess> visitMap(access: A): SerdeResult<CustomErrorResponse> {
+                    var customError: String? = null
+                    while (true) {
+                        val key = access.nextKey(StringDeserialize).getOrThrow() ?: break
+                        when (key) {
+                            "custom_error" -> customError = access.nextValue(StringDeserialize).getOrThrow()
+                            else -> access.nextValue(IgnoredAny).getOrThrow()
+                        }
+                    }
+                    val finalCustomError = customError ?: return SerdeResult.failure(SerdeError.missingField("custom_error"))
+                    return SerdeResult.success(CustomErrorResponse(finalCustomError))
+                }
+            }
+            return deserializer.deserializeStruct(
+                "CustomErrorResponse",
+                listOf("custom_error"),
+                VisitorImpl(),
+            )
         }
+
+        fun fromJsonString(jsonString: String): CustomErrorResponse =
+            fromStr(jsonString, this).getOrThrow()
     }
 }
 
@@ -51,7 +87,8 @@ internal object CustomErrorClientFactory {
                 CustomErrorResponse.fromJsonString(bytes.decodeToString())
             },
             introspectionResponseDeserializer = { bytes ->
-                val json = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
+                val outcome = fromSlice(bytes).getOrThrow()
+                val json = outcome.asObject() ?: JsonMap()
                 val base =
                     StandardTokenIntrospectionResponse.fromJsonString(bytes.decodeToString()) {
                         ColorfulTokenType.fromString(it)
@@ -69,7 +106,7 @@ internal object CustomErrorClientFactory {
                     aud = base.aud(),
                     iss = base.iss(),
                     jti = base.jti(),
-                    extraFields = ColorfulFields.fromJsonObject(json),
+                    extraFields = ColorfulFields.fromJsonObject(Value.Object(json)),
                 )
             },
             revocationErrorDeserializer = { bytes ->
@@ -833,13 +870,10 @@ class TokenTest {
             serializedJson,
         )
 
-        val json = Json.parseToJsonElement(serializedJson).jsonObject
         val deserializedError =
-            StandardErrorResponse.new(
-                ColorfulErrorResponseType.fromString(json["error"]?.jsonPrimitive?.contentOrNull.orEmpty()),
-                json["error_description"]?.jsonPrimitive?.contentOrNull,
-                json["error_uri"]?.jsonPrimitive?.contentOrNull,
-            )
+            StandardErrorResponse.fromJsonString(serializedJson) {
+                ColorfulErrorResponseType.fromString(it)
+            }
         assertEquals(errorResponse, deserializedError)
         assertEquals(
             "Server returned error response: too_light: stuff happened (see https://errors)",
